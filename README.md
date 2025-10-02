@@ -1,7 +1,7 @@
 # ECE1724-F1-2025F-Rust-Ball-Ball-U
 ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems with Rust 2025 Fall Project
 
-Project Link: https://github.com/zlt0518/ECE1724-F1-2025F-Rust-Ball-Ball-U
+Project Link: [Home Page][home_page]
 
 ## Team Members
 Student 1: [Litao(John) Zhou][github_john] - 1006013092 - litao.zhou@mail.utoronto.ca \
@@ -10,7 +10,7 @@ Student 3: [Chuyue Zhang][github_chuyue] - 1005728303 - zhangchuyue.zhang@mail.u
 
 ### Introduction 
 
-Ball Ball U is a real-time multiplayer PvP game inspired by Battle of Balls and Agar.io, implemented in Rust with a focus on performance, concurrency, and fair competitive gameplay.
+Ball Ball U is a real-time multiplayer PvP game inspired by [Battle of Balls][battle_of_balls] and [Agar.io][agar_io], implemented in Rust with a focus on performance, concurrency, and fair competitive gameplay.
 
 
 ### Motivation
@@ -44,14 +44,14 @@ Player input processing: It manages a dynamic list of WebSocket connections to e
 Game mechanics engine: It continuously updates the game state in a fixed-tick loop, applying the core game mechanics at each step.
 State Synchronization: It broadcasts a snapshot of the current game state to all clients at a regular interval.
 
-The server would use Tokio Async Runtime as the core tech stack, and use the Tokio-tungstenite to implement the WebSockets. 
+The server would use Tokio Async Runtime as the core tech stack, and use the [Tokio-tungstenite][Tokio-tungstenite] to implement the WebSockets. 
 
 #### Client
 
 The client is responsible for rendering the state received from the server and capturing the user input. It serves as the frontend of the project. It has the following features:
 
 Graphics rendering: It utilizes the Bevy Engine to manage the game camera and render all the game objects on screen efficiently.
-Server communication: It establishes a persistent WebSocket connection to the server to send player inputs and receive game state updates.
+Server communication: It establishes a persistent [WebSocket][WebSocket] connection to the server to send player inputs and receive game state updates.
 Input handling: It captures keyboard inputs and translates them into serialized messages for the server. To ensure responsive controls and hide network latency, the client would immediately act on keyboard inputs, providing immediate visual feedback. Meanwhile, the inputs are sent to the server for validation and processing.
 User interface: It displays game information to the player, such as a real-time leaderboard and the names floating above each player's cell.
 
@@ -69,7 +69,7 @@ When a player's cell collides with another player's cell, the player with the hi
 The size of the player is proportional to the score of the player.
 The speed of the player is inversely proportional to the score of the player.
 When a player is consumed, they are presented with an option to either rejoin the game or quit.
-Serialization: For the data serialization during the message transmission, we would use Serde to do it. 
+Serialization: For the data serialization during the message transmission, we would use [Serde][Serde] to do it. 
 Communication protocol: We would define all the messages, including client messages and server messages, in the protocol here.
 
 <div align="center">
@@ -86,7 +86,14 @@ Communication protocol: We would define all the messages, including client messa
   </figure>
 </div>
 
+[home_page]: https://github.com/zlt0518/ECE1724-F1-2025F-Rust-Ball-Ball-U
+[battle_of_balls]: https://www.battleofballs.com
+[agar_io]: https://agar.io
 [github_john]: https://github.com/zlt0518
 [github_siyu]: https://github.com/jassiyu
 [github_chuyue]: https://github.com/IronDumpling
+
+[Tokio-tungstenite]:https://docs.rs/tokio-tungstenite/latest/tokio_tungstenite/
+[WebSocket]: https://github.com/snapview/tungstenite-rs
+[Serde]: https://serde.rs/
 
