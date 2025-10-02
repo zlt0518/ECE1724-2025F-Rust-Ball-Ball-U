@@ -4,9 +4,9 @@ ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems 
 Project Link: https://github.com/zlt0518/ECE1724-F1-2025F-Rust-Ball-Ball-U
 
 ## Team Members
-Student 1: Litao(John) Zhou - 1006013092 - litao.zhou@mail.utoronto.ca \
-Student 2: Siyu Shao - 1007147204 - jasmine.shao@mail.utoronto.ca \
-Student 3: Chuyue Zhang - 1005728303 - zhangchuyue.zhang@mail.utoronto.ca 
+Student 1: [Litao(John) Zhou][github_john] - 1006013092 - litao.zhou@mail.utoronto.ca \
+Student 2: [Siyu Shao][github_siyu] - 1007147204 - jasmine.shao@mail.utoronto.ca \
+Student 3: [Chuyue Zhang][github_chuyue] - 1005728303 - zhangchuyue.zhang@mail.utoronto.ca 
 
 ### Introduction 
 
@@ -71,4 +71,8 @@ The speed of the player is inversely proportional to the score of the player.
 When a player is consumed, they are presented with an option to either rejoin the game or quit.
 Serialization: For the data serialization during the message transmission, we would use Serde to do it. 
 Communication protocol: We would define all the messages, including client messages and server messages, in the protocol here.
+
+[github_john]: https://github.com/zlt0518
+[github_siyu]: https://github.com/jassiyu
+[github_chuyue]: https://github.com/IronDumpling
 
