@@ -80,7 +80,7 @@ The shared game mechanics library is used to model the game objects and define t
 
 <div align="center">
   <p>
-    <img src="ece1724_architecture.drawio.png" alt="architecture_diagram" width="70%">
+    <img src="images/ece1724_architecture.drawio.png" alt="architecture_diagram" width="70%">
   </p>
   <p>
     <em> Figure 1. Project Architecture Diagram </em>
@@ -89,7 +89,7 @@ The shared game mechanics library is used to model the game objects and define t
 
 <div align="center">
   <p>
-    <img src="ece1724_sequence_diagram.drawio.png" alt="sequence_diagram" width="70%">
+    <img src="images/ece1724_sequence_diagram.drawio.png" alt="sequence_diagram" width="70%">
   </p>
   <p>
     <em> Figure 2. Project Sequence Diagram </em>
