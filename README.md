@@ -10,7 +10,7 @@ Student 3: [Chuyue Zhang][github_chuyue] - 1005728303 - zhangchuyue.zhang@mail.u
 
 ### Introduction 
 
-Ball Ball U is a real-time multiplayer PvP game inspired by Battle of Balls, implemented in Rust with a focus on performance, concurrency, and fair competitive gameplay.
+Ball Ball U is a real-time multiplayer PvP game inspired by Battle of Balls and Agar.io, implemented in Rust with a focus on performance, concurrency, and fair competitive gameplay.
 
 
 ### Motivation
@@ -71,6 +71,20 @@ The speed of the player is inversely proportional to the score of the player.
 When a player is consumed, they are presented with an option to either rejoin the game or quit.
 Serialization: For the data serialization during the message transmission, we would use Serde to do it. 
 Communication protocol: We would define all the messages, including client messages and server messages, in the protocol here.
+
+<div align="center">
+  <figure>
+    <img src="ece1724_architecture.drawio.png" alt="architecture_diagram">
+    <figcaption>Figure 1. Project Architecture Diagram</figcaption>
+  </figure>
+</div>
+
+<div align="center">
+  <figure>
+    <img src="ece1724_sequence_diagram.drawio.png" alt="sequence_diagram">
+    <figcaption>Figure 2. Project Sequence Diagram</figcaption>
+  </figure>
+</div>
 
 [github_john]: https://github.com/zlt0518
 [github_siyu]: https://github.com/jassiyu
