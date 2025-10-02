@@ -1,7 +1,7 @@
 # ECE1724-F1-2025F-Rust-Ball-Ball-U
 ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems with Rust 2025 Fall Project
 
-Project Link: Homepage
+Project Link: https://github.com/zlt0518/ECE1724-F1-2025F-Rust-Ball-Ball-U
 
 ## Team Members
 Student 1: Litao(John) Zhou - 1006013092 - litao.zhou@mail.utoronto.ca \
