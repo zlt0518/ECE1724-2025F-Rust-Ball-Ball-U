@@ -4,20 +4,26 @@ ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems 
 Project Link: [Home Page][home_page]
 
 ## Team Members
-Student 1: [Litao(John) Zhou][github_john] - 1006013092 - litao.zhou@mail.utoronto.ca \
-Student 2: [Siyu Shao][github_siyu] - 1007147204 - jasmine.shao@mail.utoronto.ca \
-Student 3: [Chuyue Zhang][github_chuyue] - 1005728303 - zhangchuyue.zhang@mail.utoronto.ca 
+- [Litao(John) Zhou][github_john] \
+  Student Number: 1006013092 \
+  Email: litao.zhou@mail.utoronto.ca 
+- [Siyu Shao][github_siyu] \
+  Student Number: 1007147204 \
+  Email: jasmine.shao@mail.utoronto.ca 
+- [Chuyue Zhang][github_chuyue] \
+  Student Number: 1005728303 \
+  Email: zhangchuyue.zhang@mail.utoronto.ca 
 
 ### Introduction 
 
-Ball Ball U is a real-time multiplayer PvP game inspired by [Battle of Balls][battle_of_balls] and [Agar.io][agar_io], implemented in Rust with a focus on performance, concurrency, and fair competitive gameplay.
+**Ball Ball U** is a real-time multiplayer PvP game inspired by [Battle of Balls][battle_of_balls] and [Agar.io][agar_io], implemented in Rust with a focus on performance, concurrency, and fair competitive gameplay.
 
 
 ### Motivation
 
 Agar.io and Battle of Balls are popular real-time multiplayer games that share the concept that players control balls that grow by consuming smaller balls and scattered food items. Their simple mechanics create deep competitive strategies, making it popular across a wide range of players. 
 
-Our project Ball Ball U is inspired by both games, but shifts the focus from PvE-style survival to fast-paced PvP competition. In this version, players directly confront each other, testing both reflexes and strategic decisions such as movement and positioning. This change makes matches more dynamic and competitive, with outcomes driven by player interactions rather than environmental factors. 
+Our project **Ball Ball U** is inspired by both games, but shifts the focus from PvE-style survival to fast-paced PvP competition. In this version, players directly confront each other, testing both reflexes and strategic decisions such as movement and positioning. This change makes matches more dynamic and competitive, with outcomes driven by player interactions rather than environmental factors. 
 
 We chose Rust because its performance, concurrency model, and memory safety make it well-suited for building a reliable real-time PvP multiplayer game. Although Rust has many existing resources for game development and for backend servers, there are very few complete examples that combine the two into a real-time multiplayer system. Our project helps fill this gap by showing how to connect a Rust game engine with an asynchronous server runtime, providing a clear reference for developers interested in building multiplayer games in Rust.
 
@@ -39,10 +45,10 @@ To achieve our objective, the project will be built around three core pillars: a
 
 The server is the single source of truth for all game logic and state. It serves as the backend of the project. It has the following features:
 
-Game state management: It manages the position, size, and velocity of all game objects, including all players and items in the game scene. 
-Player input processing: It manages a dynamic list of WebSocket connections to each client. It receives and validates player actions sent from multiple clients via WebSockets. It would also resolve all the time sequential conflicts centrally.
-Game mechanics engine: It continuously updates the game state in a fixed-tick loop, applying the core game mechanics at each step.
-State Synchronization: It broadcasts a snapshot of the current game state to all clients at a regular interval.
+ - Game state management: It manages the position, size, and velocity of all game objects, including all players and items in the game scene. 
+ - Player input processing: It manages a dynamic list of WebSocket connections to each client. It receives and validates player actions sent from multiple clients via WebSockets. It would also resolve all the time sequential conflicts centrally.
+ - Game mechanics engine: It continuously updates the game state in a fixed-tick loop, applying the core game mechanics at each step.
+ - State Synchronization: It broadcasts a snapshot of the current game state to all clients at a regular interval.
 
 The server would use Tokio Async Runtime as the core tech stack, and use the [Tokio-tungstenite][Tokio-tungstenite] to implement the WebSockets. 
 
@@ -50,27 +56,27 @@ The server would use Tokio Async Runtime as the core tech stack, and use the [To
 
 The client is responsible for rendering the state received from the server and capturing the user input. It serves as the frontend of the project. It has the following features:
 
-Graphics rendering: It utilizes the Bevy Engine to manage the game camera and render all the game objects on screen efficiently.
-Server communication: It establishes a persistent [WebSocket][WebSocket] connection to the server to send player inputs and receive game state updates.
-Input handling: It captures keyboard inputs and translates them into serialized messages for the server. To ensure responsive controls and hide network latency, the client would immediately act on keyboard inputs, providing immediate visual feedback. Meanwhile, the inputs are sent to the server for validation and processing.
-User interface: It displays game information to the player, such as a real-time leaderboard and the names floating above each player's cell.
+ - Graphics rendering: It utilizes the Bevy Engine to manage the game camera and render all the game objects on screen efficiently.
+ - Server communication: It establishes a persistent [WebSocket][WebSocket] connection to the server to send player inputs and receive game state updates.
+ - Input handling: It captures keyboard inputs and translates them into serialized messages for the server. To ensure responsive controls and hide network latency, the client would immediately act on keyboard inputs, providing immediate visual feedback. Meanwhile, the inputs are sent to the server for validation and processing.
+ - User interface: It displays game information to the player, such as a real-time leaderboard and the names floating above each player's cell.
 
 #### Shared Game Mechanics Library
 
 The shared game mechanics library is used to model the game objects and define the game mechanics in the game. The features include:
 
-Game objects
-Player cells: Each player controls a cell that contains a specific name, color, score, size, and speed.
-Dots: These are small, static circles that spawn randomly on the map. Consuming them increases a player's score.
-Game space: The game takes place within a large, rectangular area with defined boundaries.
-Game mechanics:
-When a player's cell collides with a dot, the dot is consumed, and its score is added to the player's score.
-When a player's cell collides with another player's cell, the player with the higher score consumes the one with the lower score. The winner's score increases by the loser's score.
-The size of the player is proportional to the score of the player.
-The speed of the player is inversely proportional to the score of the player.
-When a player is consumed, they are presented with an option to either rejoin the game or quit.
-Serialization: For the data serialization during the message transmission, we would use [Serde][Serde] to do it. 
-Communication protocol: We would define all the messages, including client messages and server messages, in the protocol here.
+ - Game objects
+   - Player cells: Each player controls a cell that contains a specific name, color, score, size, and speed.
+   - Dots: These are small, static circles that spawn randomly on the map. Consuming them increases a player's score.
+   - Game space: The game takes place within a large, rectangular area with defined boundaries.
+ - Game mechanics:
+   - When a player's cell collides with a dot, the dot is consumed, and its score is added to the player's score.
+   - When a player's cell collides with another player's cell, the player with the higher score consumes the one with the lower score. The winner's score increases by the loser's score.
+   - The size of the player is proportional to the score of the player.
+   - The speed of the player is inversely proportional to the score of the player.
+   - When a player is consumed, they are presented with an option to either rejoin the game or quit.
+ - Serialization: For the data serialization during the message transmission, we would use [Serde][Serde] to do it. 
+ - Communication protocol: We would define all the messages, including client messages and server messages, in the protocol here.
 
 <div align="center">
   <p>
@@ -91,6 +97,12 @@ Communication protocol: We would define all the messages, including client messa
 </div>
 
 ### Tentative Plan
+
+ - **John Zhou**: Implementing WebSocket communication, handling latency with client prediction and server reconciliation, and contributing to multi-client testing, performance optimization, and final documentation. \
+ - **Siyu Shao**:  Implementing on the client side, developing Bevy-based rendering, input handling, UI features, as well as visual polish and related documentation \
+ - **Chuyue Zhang**: Implementing authorized server logic, multi-client testing from the server’s perspective, server performance optimization, and documentation. 
+
+
 | Task Name                                                      | Tentative Assignee        |
 |----------------------------------------------------------------|---------------------------|
 | Initialize project workspace and dependencies.                 | John, Chuyue, Siyu        |
