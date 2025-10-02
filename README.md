@@ -97,12 +97,12 @@ The shared game mechanics library is used to model the game objects and define t
 </div>
 
 ### Tentative Plan
-
- - **John Zhou**: Implementing WebSocket communication, handling latency with client prediction and server reconciliation, and contributing to multi-client testing, performance optimization, and final documentation. \
- - **Siyu Shao**:  Implementing on the client side, developing Bevy-based rendering, input handling, UI features, as well as visual polish and related documentation \
+#### Individual Responsibility
+ - **John Zhou**: Implementing WebSocket communication, handling latency with client prediction and server reconciliation, and contributing to multi-client testing, performance optimization, and final documentation. 
+ - **Siyu Shao**:  Implementing on the client side, developing Bevy-based rendering, input handling, UI features, as well as visual polish and related documentation 
  - **Chuyue Zhang**: Implementing authorized server logic, multi-client testing from the server’s perspective, server performance optimization, and documentation. 
 
-
+#### Task Table
 | Task Name                                                      | Tentative Assignee        |
 |----------------------------------------------------------------|---------------------------|
 | Initialize project workspace and dependencies.                 | John, Chuyue, Siyu        |
