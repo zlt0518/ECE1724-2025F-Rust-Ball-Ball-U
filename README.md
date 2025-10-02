@@ -86,6 +86,26 @@ Communication protocol: We would define all the messages, including client messa
   </figure>
 </div>
 
+
+
+
+#### Tentative Plan
+| Task Name                                             | Tentative Schedule | Tentative Assignee        |
+|-------------------------------------------------------|--------------------|---------------------------|
+| Initialize project workspace and dependencies.        | Oct. 15            | John, Chuyue, Siyu        |
+| Define shared data models and basic client-server message types. | Oct. 21 | John, Chuyue, Siyu |
+| Implement server tick loop, basic game mechanics.     | Oct. 27            | Chuyue                    |
+| Basic WebSocket communication with connected clients. | Nov. 5             | John                      |
+| Implement Bevy rendering for arena, cells, and dots.  | Nov. 5             | Siyu                      |
+| Capture user input and integrate with server state updates. | Nov. 10 | Siyu, John          |
+| PvP collision and size-speed tradeoff                 | Nov. 17            | Chuyue, Siyu              |
+| Respawn and leaderboard                               | Nov. 17            | Chuyue, Siyu              |
+| Latency handling (client prediction and server reconciliation) | Nov. 25 | John              |
+| Multi-client testing and edge case debugging          | Dec. 1             | Chuyue, Siyu, John        |
+| Performance optimization                              | Dec. 7             | Chuyue, Siyu, John        |
+| Documents finalization and demo                       | Dec. 15            | Chuyue, Siyu, John        |
+
+
 [home_page]: https://github.com/zlt0518/ECE1724-F1-2025F-Rust-Ball-Ball-U
 [battle_of_balls]: https://www.battleofballs.com
 [agar_io]: https://agar.io
