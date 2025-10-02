@@ -23,8 +23,7 @@ We chose Rust because its performance, concurrency model, and memory safety make
 
 ### Objective and key features
 
-
-### Objective
+#### Objective
 
 The primary objective of this project is to design and implement a complete, end-to-end, real-time multiplayer game using a pure Rust technology stack.
 
@@ -32,11 +31,11 @@ Inspired by popular titles like Agar.io and Battle of Life, the primary goal is 
 
 Our goal is to develop a high-performance, concurrent, and memory-safe multiplayer game server entirely in Rust. This real-time PvP project would include features such as rapid synchronization, consistent state, and low-latency scaling. To support this, we refine mechanics like collision detection, growth rules, and movement dynamics, ensuring fair and engaging encounters.
 
-### Key Features
+#### Key Features
 
 To achieve our objective, the project will be built around three core pillars: a centralized server, a responsive client, and a well-defined set of gameplay mechanics.
 
-### Server
+#### Server
 
 The server is the single source of truth for all game logic and state. It serves as the backend of the project. It has the following features:
 
@@ -47,7 +46,7 @@ State Synchronization: It broadcasts a snapshot of the current game state to all
 
 The server would use Tokio Async Runtime as the core tech stack, and use the Tokio-tungstenite to implement the WebSockets. 
 
-### Client
+#### Client
 
 The client is responsible for rendering the state received from the server and capturing the user input. It serves as the frontend of the project. It has the following features:
 
@@ -56,7 +55,7 @@ Server communication: It establishes a persistent WebSocket connection to the se
 Input handling: It captures keyboard inputs and translates them into serialized messages for the server. To ensure responsive controls and hide network latency, the client would immediately act on keyboard inputs, providing immediate visual feedback. Meanwhile, the inputs are sent to the server for validation and processing.
 User interface: It displays game information to the player, such as a real-time leaderboard and the names floating above each player's cell.
 
-### Shared Game Mechanics Library
+#### Shared Game Mechanics Library
 
 The shared game mechanics library is used to model the game objects and define the game mechanics in the game. The features include:
 
