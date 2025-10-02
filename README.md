@@ -119,7 +119,7 @@ The shared game mechanics library is used to model the game objects and define t
 | Documents finalization and demo                                | Chuyue, Siyu, John        |
 
 
-[home_page]: https://github.com/zlt0518/ECE1724-F1-2025F-Rust-Ball-Ball-U
+[home_page]: https://github.com/zlt0518/ECE1724-2025F-Rust-Ball-Ball-U
 [battle_of_balls]: https://www.battleofballs.com
 [agar_io]: https://agar.io
 [github_john]: https://github.com/zlt0518
