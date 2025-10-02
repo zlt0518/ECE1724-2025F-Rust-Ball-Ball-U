@@ -73,23 +73,24 @@ Serialization: For the data serialization during the message transmission, we wo
 Communication protocol: We would define all the messages, including client messages and server messages, in the protocol here.
 
 <div align="center">
-  <figure>
-    <img src="ece1724_architecture.drawio.png" alt="architecture_diagram">
-    <figcaption>Figure 1. Project Architecture Diagram</figcaption>
-  </figure>
+  <p>
+    <img src="ece1724_architecture.drawio.png" alt="architecture_diagram" width="70%">
+  </p>
+  <p>
+    <em> Figure 1. Project Architecture Diagram </em>
+  </p>
 </div>
 
 <div align="center">
-  <figure>
-    <img src="ece1724_sequence_diagram.drawio.png" alt="sequence_diagram">
-    <figcaption>Figure 2. Project Sequence Diagram</figcaption>
-  </figure>
+  <p>
+    <img src="ece1724_sequence_diagram.drawio.png" alt="sequence_diagram" width="70%">
+  </p>
+  <p>
+    <em> Figure 2. Project Sequence Diagram </em>
+  </p>
 </div>
 
-
-
-
-#### Tentative Plan
+### Tentative Plan
 | Task Name                                             | Tentative Schedule | Tentative Assignee        |
 |-------------------------------------------------------|--------------------|---------------------------|
 | Initialize project workspace and dependencies.        | Oct. 15            | John, Chuyue, Siyu        |
