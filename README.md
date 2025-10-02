@@ -4,15 +4,15 @@ ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems 
 Project Link: [BALL BALL U - Home Page][home_page]
 
 ## Team Members
-- [Litao(John) Zhou][github_john] \
-  Student Number: 1006013092 \
-  Email: litao.zhou@mail.utoronto.ca 
-- [Siyu Shao][github_siyu] \
-  Student Number: 1007147204 \
-  Email: jasmine.shao@mail.utoronto.ca 
-- [Chuyue Zhang][github_chuyue] \
-  Student Number: 1005728303 \
-  Email: zhangchuyue.zhang@mail.utoronto.ca 
+- **Team Member**: [Litao(John) Zhou][github_john] \
+  **Student Number**: 1006013092 \
+  **Email**: litao.zhou@mail.utoronto.ca 
+- **Team Member**: [Siyu Shao][github_siyu] \
+  **Student Number**: 1007147204 \
+  **Email**: jasmine.shao@mail.utoronto.ca 
+- **Team Member**: [Chuyue Zhang][github_chuyue] \
+  **Student Number**: 1005728303 \
+  **Email**: zhangchuyue.zhang@mail.utoronto.ca 
 
 ### Introduction 
 
