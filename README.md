@@ -103,20 +103,20 @@ The shared game mechanics library is used to model the game objects and define t
  - **Chuyue Zhang**: Implementing authorized server logic, multi-client testing from the server’s perspective, server performance optimization, and documentation. 
 
 #### Task Table
-| Task Name                                                      | Tentative Assignee        |
-|----------------------------------------------------------------|---------------------------|
-| Initialize project workspace and dependencies.                 | John, Chuyue, Siyu        |
-| Define shared data models and basic client-server message types| John, Chuyue, Siyu        |
-| Implement server tick loop, basic game mechanics.              | Chuyue                    |
-| Basic WebSocket communication with connected clients.          | John                      |
-| Implement Bevy rendering for arena, cells, and dots.           | Siyu                      |
-| Capture user input and integrate with server state updates.    | Siyu, John                |
-| PvP collision and size-speed tradeoff                          | Chuyue, Siyu              |
-| Respawn and leaderboard                                        | Chuyue, Siyu              |
-| Latency handling (client prediction and server reconciliation) | John                      |
-| Multi-client testing and edge case debugging                   | Chuyue, Siyu, John        |
-| Performance optimization                                       | Chuyue, Siyu, John        |
-| Documents finalization and demo                                | Chuyue, Siyu, John        |
+| Task Name                                                      | Tentative Assignee        | Refined Time |
+|----------------------------------------------------------------|---------------------------|--------------|
+| Initialize project workspace and dependencies.                 | John, Chuyue, Siyu        | 0.5 week     |
+| Define shared data models and basic client-server message types.| John, Chuyue, Siyu        | 0.5 week     |
+| Implement server tick loop, basic game mechanics.              | Chuyue                    | 1 week       |
+| Basic WebSocket communication with connected clients.          | John                      | 1 week       |
+| Implement Bevy rendering for arena, cells, and dots.           | Siyu                      | 1 week       |
+| Capture user input and integrate with server state updates.    | Siyu, John                | 0.5 week     |
+| PvP collision and size-speed tradeoff                          | Chuyue, Siyu              | 1 week       |
+| Respawn and leaderboard                                        | Chuyue, Siyu              | 0.5 week     |
+| Latency handling (client prediction and server reconciliation) | John                      | 1 week       |
+| Multi-client testing and edge case debugging                   | Chuyue, Siyu, John        | 1 week       |
+| Performance optimization                                       | Chuyue, Siyu, John        | 0.5 week     |
+| Documents finalization and demo                                | Chuyue, Siyu, John        | 0.5 week     |
 
 
 [home_page]: https://github.com/zlt0518/ECE1724-2025F-Rust-Ball-Ball-U
