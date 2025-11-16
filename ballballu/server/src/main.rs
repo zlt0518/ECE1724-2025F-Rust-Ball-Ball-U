@@ -1,22 +1,36 @@
 mod websocket_manager;
 mod game_state;
 mod game_loop;
+mod http_server;
 
 use std::sync::Arc;
+use std::path::PathBuf;
 use websocket_manager::WebSocketManager;
 use game_loop::GameLoop;
+use http_server::HttpServer;
 
 #[tokio::main]
 async fn main() {
-    let ws = Arc::new(WebSocketManager::new("127.0.0.1:8000").await);
+    // WebSocket server for game communication
+    let ws = Arc::new(WebSocketManager::new("0.0.0.0:8000").await);
     let game_loop = GameLoop::new(ws.clone());
 
-    // Phase 3: Spawn accept loop in background
+    // HTTP server for static files (test.html, styles.css, app.js)
+    let static_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("static");
+    let http_server = HttpServer::new("0.0.0.0:8080", static_dir);
+
+    // Spawn WebSocket accept loop
     let ws_clone = ws.clone();
     tokio::spawn(async move {
         ws_clone.run_accept_loop().await;
     });
 
-    // Phase 3: Run game loop (blocks here)
+    // Spawn HTTP server for static files
+    let http_server_clone = http_server;
+    tokio::spawn(async move {
+        http_server_clone.run().await;
+    });
+
+    // Run game loop (blocks here)
     game_loop.run().await;
 }
