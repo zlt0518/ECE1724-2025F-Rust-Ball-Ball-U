@@ -1,16 +1,22 @@
 use tokio::net::TcpListener;
 use tokio_tungstenite::{accept_async, tungstenite::Message};
-use futures_util::StreamExt;
+use futures_util::{StreamExt, SinkExt};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, mpsc};
+use std::collections::HashMap;
 
-use shared::protocol::ClientMessage;
+use shared::protocol::{ClientMessage, ServerMessage, StateUpdateMessage};
 use crate::game_state::GameState;
+
+pub type Tx = mpsc::UnboundedSender<Message>;
+pub type Rx = mpsc::UnboundedReceiver<Message>;
 
 pub struct WebSocketManager {
     pub addr: String,
     pub next_player_id: Arc<Mutex<u64>>,
     pub game_state: Arc<Mutex<GameState>>,
+    // Phase 3: Connections for broadcasting
+    pub connections: Arc<Mutex<HashMap<u64, Tx>>>,
 }
 
 impl WebSocketManager {
@@ -26,10 +32,29 @@ impl WebSocketManager {
             addr: addr.to_string(),
             next_player_id: Arc::new(Mutex::new(1)),
             game_state: Arc::new(Mutex::new(GameState::new(constants))),
+            connections: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
-    pub async fn run(&self) {
+    /// Phase 3: Broadcast current snapshot to all connected players
+    pub async fn broadcast_state(&self) {
+        let snapshot = {
+            let gs = self.game_state.lock().await;
+            gs.to_snapshot()
+        };
+        let msg = ServerMessage::StateUpdate(StateUpdateMessage { snapshot });
+        let text = serde_json::to_string(&msg).unwrap();
+        
+        let conns = self.connections.lock().await;
+        for (id, tx) in conns.iter() {
+            if tx.send(Message::Text(text.clone())).is_err() {
+                println!("Broadcast to player {} failed", id);
+            }
+        }
+    }
+
+    /// Phase 3: Accept new connections (renamed from run for clarity)
+    pub async fn run_accept_loop(&self) {
         let listener = TcpListener::bind(&self.addr).await.unwrap();
         println!("Server WebSocket running at ws://{}/", self.addr);
 
@@ -38,6 +63,7 @@ impl WebSocketManager {
 
             let id_counter = self.next_player_id.clone();
             let gs_state = self.game_state.clone();
+            let connections = self.connections.clone();
 
             tokio::spawn(async move {
                 let ws_stream = match accept_async(stream).await {
@@ -48,7 +74,19 @@ impl WebSocketManager {
                     }
                 };
 
-                let mut ws_stream = ws_stream;
+                let (mut ws_tx, mut ws_rx) = ws_stream.split();
+
+                // Phase 3: Create a channel for sending messages to this client
+                let (tx, mut rx): (Tx, Rx) = mpsc::unbounded_channel();
+
+                // Phase 3: Forward messages from channel to websocket
+                tokio::spawn(async move {
+                    while let Some(msg) = rx.recv().await {
+                        if ws_tx.send(msg).await.is_err() {
+                            break;
+                        }
+                    }
+                });
 
                 // 1. 分配 player id
                 let mut id_guard = id_counter.lock().await;
@@ -61,9 +99,12 @@ impl WebSocketManager {
                 // 2. 加入 GameState
                 gs_state.lock().await.add_player(id);
 
+                // Phase 3: Register connection for broadcasting
+                connections.lock().await.insert(id, tx);
+
                 // 3. 读消息
                 //    无论是 Close 还是错误，最后都会执行 remove_player
-                while let Some(msg_result) = ws_stream.next().await {
+                while let Some(msg_result) = ws_rx.next().await {
                     match msg_result {
                         Ok(Message::Text(txt)) => {
                             println!("Raw text from {}: {}", id, txt);
@@ -97,6 +138,7 @@ impl WebSocketManager {
                 // 4. 无论如何，最终从 GameState 移除
                 println!("Cleaning up player {} from GameState", id);
                 gs_state.lock().await.remove_player(id);
+                connections.lock().await.remove(&id);
             });
         }
     }

@@ -1,27 +1,58 @@
 use std::collections::HashMap;
+use rand::Rng;
 
 use shared::{
-    PlayerSpec,
-    Dot,
     GameConstant,
     GameSnapshot,
     protocol::ClientMessage,
+    objects::{PlayerSpec, Dot},
 };
+
+// Phase 4: Store player input direction
+#[derive(Debug, Clone)]
+struct PlayerInput {
+    pub dx: f32,
+    pub dy: f32,
+}
 
 pub struct GameState {
     pub tick: u64,
     pub players: HashMap<u64, PlayerSpec>,
     pub dots: HashMap<u64, Dot>,
     pub constants: GameConstant,
+    // Phase 4: Store player inputs separately
+    player_inputs: HashMap<u64, PlayerInput>,
+    next_dot_id: u64,
 }
 
 impl GameState {
     pub fn new(constants: GameConstant) -> Self {
-        Self {
+        let mut gs = Self {
             tick: 0,
             players: HashMap::new(),
             dots: HashMap::new(),
             constants,
+            player_inputs: HashMap::new(),
+            next_dot_id: 1,
+        };
+        // Phase 5: Initialize dots
+        gs.spawn_initial_dots(150);
+        gs
+    }
+
+    /// Phase 5: Spawn initial dots on the map
+    fn spawn_initial_dots(&mut self, count: usize) {
+        let mut rng = rand::thread_rng();
+        for _ in 0..count {
+            let id = self.next_dot_id;
+            self.next_dot_id += 1;
+            self.dots.insert(id, Dot {
+                id,
+                x: rng.gen_range(0.0..800.0),
+                y: rng.gen_range(0.0..600.0),
+                radius: self.constants.dot_radius,
+                color: (255, 100, 100), // Red dots
+            });
         }
     }
 
@@ -38,12 +69,15 @@ impl GameState {
             sequence_number: 0,
         };
         self.players.insert(id, p);
+        // Phase 4: Initialize input to zero
+        self.player_inputs.insert(id, PlayerInput { dx: 0.0, dy: 0.0 });
         println!("GameState: Player {} added", id);
     }
 
     /// Remove player when disconnected
     pub fn remove_player(&mut self, id: u64) {
         self.players.remove(&id);
+        self.player_inputs.remove(&id);
         println!("GameState: Player {} removed", id);
     }
 
@@ -56,15 +90,26 @@ impl GameState {
                 }
                 println!("GameState: Player {} set name to {}", id, name);
             }
+            ClientMessage::Input { input } => {
+                // Phase 4: Store player input
+                if let Some(player_input) = self.player_inputs.get_mut(&id) {
+                    player_input.dx = input.dx;
+                    player_input.dy = input.dy;
+                    println!("GameState: Player {} input: dx={}, dy={}", id, input.dx, input.dy);
+                }
+            }
             ClientMessage::Quit => {
                 println!("GameState: Player {} sent Quit", id);
                 self.remove_player(id);
             }
-            _ => {
-                // Input 留到 Phase 3 处理
-                println!("GameState: Player {} sent non-Join/Quit message", id);
-            }
         }
+    }
+
+    /// Phase 4: Get player input for movement
+    pub fn get_player_input(&self, id: u64) -> (f32, f32) {
+        self.player_inputs.get(&id)
+            .map(|input| (input.dx, input.dy))
+            .unwrap_or((0.0, 0.0))
     }
 
 
