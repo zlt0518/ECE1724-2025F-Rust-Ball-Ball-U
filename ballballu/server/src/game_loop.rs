@@ -65,7 +65,7 @@ impl GameLoop {
                 gs.tick
             });
             self.ws.broadcast_state().await;
-            println!("[DEBUG] GameLoop: Broadcast completed");
+            //println!("[DEBUG] GameLoop: Broadcast completed");
         }
     }
 }

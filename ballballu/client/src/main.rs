@@ -23,12 +23,12 @@ async fn main() {
         }
     };
 
-    println!("[DEBUG] Initializing render manager...");
+    //println!("[DEBUG] Initializing render manager...");
     println!("Connecting to {}", url);
 
     let (ws_stream, _) = match connect_async(url).await {
         Ok(c) => {
-            println!("[DEBUG] Successfully connected to server");
+            //println!("[DEBUG] Successfully connected to server");
             c
         },
         Err(e) => {
@@ -44,11 +44,11 @@ async fn main() {
 
     // Spawn a task to receive messages from the server
     let read_handle = tokio::spawn(async move {
-        println!("[DEBUG] WebSocket read task started");
+        //println!("[DEBUG] WebSocket read task started");
         while let Some(msg) = read.next().await {
             match msg {
                 Ok(Message::Text(text)) => {
-                    println!("[DEBUG] Received text message from server: {} bytes", text.len());
+                    //println!("[DEBUG] Received text message from server: {} bytes", text.len());
                     // Try to parse as ServerMessage first
                     match serde_json::from_str::<ServerMessage>(&text) {
                         Ok(server_msg) => {
@@ -65,34 +65,34 @@ async fn main() {
                                 println!("[DEBUG] Extracted snapshot: tick={}, players={}, dots={}", 
                                     snapshot.tick, snapshot.players.len(), snapshot.dots.len());
                                 if let Err(_) = snapshot_tx.send(snapshot) {
-                                    println!("[DEBUG] Failed to send snapshot to channel");
+                                    //println!("[DEBUG] Failed to send snapshot to channel");
                                     break;
                                 } else {
-                                    println!("[DEBUG] Successfully sent snapshot to render channel");
+                                    //println!("[DEBUG] Successfully sent snapshot to render channel");
                                 }
                             } else {
-                                println!("[DEBUG] Received non-StateUpdate message, ignoring");
+                                //println!("[DEBUG] Received non-StateUpdate message, ignoring");
                             }
                         }
                         Err(e) => {
-                            println!("[DEBUG] Failed to parse ServerMessage: {:?}", e);
+                            //println!("[DEBUG] Failed to parse ServerMessage: {:?}", e);
                             println!("[DEBUG] Raw message (first 200 chars): {}", 
                                 text.chars().take(200).collect::<String>());
                             // Try direct GameSnapshot parse as fallback (for debugging)
                             match serde_json::from_str::<GameSnapshot>(&text) {
                                 Ok(snapshot) => {
-                                    println!("[DEBUG] Fallback: Direct GameSnapshot parse succeeded");
+                                    //println!("[DEBUG] Fallback: Direct GameSnapshot parse succeeded");
                                     let _ = snapshot_tx.send(snapshot);
                                 }
                                 Err(e2) => {
-                                    println!("[DEBUG] Fallback: Direct GameSnapshot parse also failed: {:?}", e2);
+                                    //println!("[DEBUG] Fallback: Direct GameSnapshot parse also failed: {:?}", e2);
                                 }
                             }
                         }
                     }
                 }
                 Ok(Message::Close(_)) => {
-                    println!("[DEBUG] Server closed connection");
+                    //println!("[DEBUG] Server closed connection");
                     break;
                 }
                 Err(e) => {
@@ -100,14 +100,14 @@ async fn main() {
                     break;
                 }
                 _ => {
-                    println!("[DEBUG] Received non-text message");
+                    //println!("[DEBUG] Received non-text message");
                 }
             }
         }
-        println!("[DEBUG] WebSocket read task ended");
+        //println!("[DEBUG] WebSocket read task ended");
     });
 
-    println!("[DEBUG] Entering main render loop");
+    //println!("[DEBUG] Entering main render loop");
     
     // Main loop: render game state and handle input
     loop {
@@ -122,11 +122,11 @@ async fn main() {
                             eprintln!("[DEBUG] Render error: {:?}", e);
                             break;
                         } else {
-                            println!("[DEBUG] Successfully rendered snapshot");
+                            //println!("[DEBUG] Successfully rendered snapshot");
                         }
                     }
                     None => {
-                        println!("[DEBUG] Snapshot channel closed, server disconnected");
+                        //println!("[DEBUG] Snapshot channel closed, server disconnected");
                         break;
                     }
                 }
@@ -134,7 +134,7 @@ async fn main() {
             // Check if read task finished
             _ = tokio::time::sleep(tokio::time::Duration::from_millis(100)) => {
                 if read_handle.is_finished() {
-                    println!("[DEBUG] Read task finished, exiting main loop");
+                    //println!("[DEBUG] Read task finished, exiting main loop");
                     break;
                 }
             }

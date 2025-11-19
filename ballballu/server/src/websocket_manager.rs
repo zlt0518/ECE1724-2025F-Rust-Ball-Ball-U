@@ -51,12 +51,12 @@ impl WebSocketManager {
         } else {
             0
         };
-        println!("[DEBUG] Broadcasting state to {} players (tick: {})", conns.len(), tick);
+        //println!("[DEBUG] Broadcasting state to {} players (tick: {})", conns.len(), tick);
         for (id, tx) in conns.iter() {
             if tx.send(Message::Text(text.clone())).is_err() {
-                println!("[DEBUG] Broadcast to player {} failed", id);
+                //println!("[DEBUG] Broadcast to player {} failed", id);
             } else {
-                println!("[DEBUG] Successfully sent state update to player {}", id);
+                //println!("[DEBUG] Successfully sent state update to player {}", id);
             }
         }
     }

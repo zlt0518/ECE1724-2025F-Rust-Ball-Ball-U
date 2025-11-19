@@ -22,15 +22,15 @@ pub struct RenderManager {
 
 impl RenderManager {
     pub fn new(world_width: f32, world_height: f32) -> io::Result<Self> {
-        println!("[DEBUG] RenderManager::new called with world size: {}x{}", world_width, world_height);
+        //println!("[DEBUG] RenderManager::new called with world size: {}x{}", world_width, world_height);
         enable_raw_mode()?;
-        println!("[DEBUG] Raw mode enabled");
+        //println!("[DEBUG] Raw mode enabled");
         let mut stdout = stdout();
         execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-        println!("[DEBUG] Entered alternate screen");
+        //println!("[DEBUG] Entered alternate screen");
         let backend = CrosstermBackend::new(stdout);
         let terminal = Terminal::new(backend)?;
-        println!("[DEBUG] Terminal initialized successfully");
+        //println!("[DEBUG] Terminal initialized successfully");
 
         Ok(Self {
             terminal,
@@ -47,7 +47,7 @@ impl RenderManager {
         self.terminal.draw(|f| {
             Self::draw_game_static(f, snapshot, world_width, world_height);
         })?;
-        println!("[DEBUG] RenderManager::render completed successfully");
+        //println!("[DEBUG] RenderManager::render completed successfully");
         Ok(())
     }
 
