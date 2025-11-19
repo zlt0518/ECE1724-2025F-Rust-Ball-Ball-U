@@ -1,9 +1,10 @@
 mod render_manager;
+mod input_manager;
 
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
-use shared::{GameSnapshot, protocol::ServerMessage};
+use shared::{GameSnapshot, protocol::{ServerMessage, ClientMessage}};
 use serde_json;
 
 #[tokio::main]
@@ -32,7 +33,7 @@ async fn main() {
             c
         },
         Err(e) => {
-            eprintln!("[DEBUG] Failed to connect: {:?}", e);
+            eprintln!("Failed to connect: {:?}", e);
             return;
         }
     };
@@ -41,6 +42,12 @@ async fn main() {
 
     // Channel to send game snapshots from websocket task to main loop
     let (snapshot_tx, mut snapshot_rx) = mpsc::unbounded_channel::<GameSnapshot>();
+    
+    // Channel to send input commands to server
+    let (input_tx, mut input_rx) = mpsc::unbounded_channel::<ClientMessage>();
+    
+    // Initialize input manager
+    let input_manager = input_manager::InputManager::new(input_tx.clone());
 
     // Spawn a task to receive messages from the server
     let read_handle = tokio::spawn(async move {
@@ -52,18 +59,9 @@ async fn main() {
                     // Try to parse as ServerMessage first
                     match serde_json::from_str::<ServerMessage>(&text) {
                         Ok(server_msg) => {
-                            println!("[DEBUG] Successfully parsed ServerMessage: {:?}", 
-                                match &server_msg {
-                                    ServerMessage::Welcome(_) => "Welcome",
-                                    ServerMessage::StateUpdate(_) => "StateUpdate",
-                                    ServerMessage::Bye(_) => "Bye",
-                                }
-                            );
                             // Extract GameSnapshot from StateUpdate
                             if let ServerMessage::StateUpdate(state_update) = server_msg {
                                 let snapshot = state_update.snapshot;
-                                println!("[DEBUG] Extracted snapshot: tick={}, players={}, dots={}", 
-                                    snapshot.tick, snapshot.players.len(), snapshot.dots.len());
                                 if let Err(_) = snapshot_tx.send(snapshot) {
                                     //println!("[DEBUG] Failed to send snapshot to channel");
                                     break;
@@ -74,17 +72,14 @@ async fn main() {
                                 //println!("[DEBUG] Received non-StateUpdate message, ignoring");
                             }
                         }
-                        Err(e) => {
-                            //println!("[DEBUG] Failed to parse ServerMessage: {:?}", e);
-                            println!("[DEBUG] Raw message (first 200 chars): {}", 
-                                text.chars().take(200).collect::<String>());
+                        Err(_e) => {
                             // Try direct GameSnapshot parse as fallback (for debugging)
                             match serde_json::from_str::<GameSnapshot>(&text) {
                                 Ok(snapshot) => {
                                     //println!("[DEBUG] Fallback: Direct GameSnapshot parse succeeded");
                                     let _ = snapshot_tx.send(snapshot);
                                 }
-                                Err(e2) => {
+                                Err(_e2) => {
                                     //println!("[DEBUG] Fallback: Direct GameSnapshot parse also failed: {:?}", e2);
                                 }
                             }
@@ -96,45 +91,52 @@ async fn main() {
                     break;
                 }
                 Err(e) => {
-                    eprintln!("[DEBUG] WebSocket error: {:?}", e);
+                    eprintln!("WebSocket error: {:?}", e);
                     break;
                 }
                 _ => {
-                    //println!("[DEBUG] Received non-text message");
+                    // Ignore other message types
                 }
             }
         }
-        //println!("[DEBUG] WebSocket read task ended");
     });
 
-    //println!("[DEBUG] Entering main render loop");
+    // Spawn a task to send input commands to server
+    let write_handle = tokio::spawn(async move {
+        while let Some(msg) = input_rx.recv().await {
+            let json = serde_json::to_string(&msg).unwrap();
+            if write.send(Message::Text(json)).await.is_err() {
+                break;
+            }
+        }
+    });
     
     // Main loop: render game state and handle input
+    let mut should_exit = false;
     loop {
+        // Poll for keyboard input (non-blocking)
+        if input_manager.poll_input() {
+            should_exit = true;
+        }
+        
         tokio::select! {
             // Receive game snapshot and render
             snapshot = snapshot_rx.recv() => {
                 match snapshot {
                     Some(snap) => {
-                        println!("[DEBUG] Received snapshot in main loop: tick={}, players={}, dots={}", 
-                            snap.tick, snap.players.len(), snap.dots.len());
                         if let Err(e) = render_manager.render(&snap) {
-                            eprintln!("[DEBUG] Render error: {:?}", e);
+                            eprintln!("Render error: {:?}", e);
                             break;
-                        } else {
-                            //println!("[DEBUG] Successfully rendered snapshot");
                         }
                     }
                     None => {
-                        //println!("[DEBUG] Snapshot channel closed, server disconnected");
                         break;
                     }
                 }
             }
-            // Check if read task finished
-            _ = tokio::time::sleep(tokio::time::Duration::from_millis(100)) => {
-                if read_handle.is_finished() {
-                    //println!("[DEBUG] Read task finished, exiting main loop");
+            // Check if tasks finished or we should exit
+            _ = tokio::time::sleep(tokio::time::Duration::from_millis(16)) => {
+                if should_exit || read_handle.is_finished() || write_handle.is_finished() {
                     break;
                 }
             }
@@ -142,5 +144,6 @@ async fn main() {
     }
 
     // Cleanup
-    let _ = write.send(Message::Close(None)).await;
+    let _ = write_handle.abort();
+    let _ = read_handle.abort();
 }
