@@ -24,7 +24,6 @@ async fn main() {
         }
     };
 
-    //println!("[DEBUG] Initializing render manager...");
     println!("Connecting to {}", url);
 
     let (ws_stream, _) = match connect_async(url).await {
@@ -51,11 +50,9 @@ async fn main() {
 
     // Spawn a task to receive messages from the server
     let read_handle = tokio::spawn(async move {
-        //println!("[DEBUG] WebSocket read task started");
         while let Some(msg) = read.next().await {
             match msg {
                 Ok(Message::Text(text)) => {
-                    //println!("[DEBUG] Received text message from server: {} bytes", text.len());
                     // Try to parse as ServerMessage first
                     match serde_json::from_str::<ServerMessage>(&text) {
                         Ok(server_msg) => {
@@ -63,20 +60,14 @@ async fn main() {
                             if let ServerMessage::StateUpdate(state_update) = server_msg {
                                 let snapshot = state_update.snapshot;
                                 if let Err(_) = snapshot_tx.send(snapshot) {
-                                    //println!("[DEBUG] Failed to send snapshot to channel");
                                     break;
-                                } else {
-                                    //println!("[DEBUG] Successfully sent snapshot to render channel");
                                 }
-                            } else {
-                                //println!("[DEBUG] Received non-StateUpdate message, ignoring");
                             }
                         }
                         Err(_e) => {
                             // Try direct GameSnapshot parse as fallback (for debugging)
                             match serde_json::from_str::<GameSnapshot>(&text) {
                                 Ok(snapshot) => {
-                                    //println!("[DEBUG] Fallback: Direct GameSnapshot parse succeeded");
                                     let _ = snapshot_tx.send(snapshot);
                                 }
                                 Err(_e2) => {
@@ -87,7 +78,6 @@ async fn main() {
                     }
                 }
                 Ok(Message::Close(_)) => {
-                    //println!("[DEBUG] Server closed connection");
                     break;
                 }
                 Err(e) => {

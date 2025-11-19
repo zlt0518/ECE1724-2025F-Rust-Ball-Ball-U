@@ -141,74 +141,15 @@ impl RenderManager {
 
         // Draw players
         for player in &snapshot.players {
-            let (x, y) = Self::world_to_screen_static(
-                player.x,
-                player.y,
+            Self::draw_player_static(
+                buffer,
+                player,
+                area,
                 world_width,
                 world_height,
                 canvas_width,
                 canvas_height,
             );
-
-            if x >= 0 && x < canvas_width as i32 && y >= 0 && y < canvas_height as i32 {
-                // Calculate screen radius from world radius
-                let screen_radius = player.radius * canvas_width / world_width;
-                let radius = screen_radius.max(0.5) as u16;
-                let radius = radius.min((canvas_width.min(canvas_height) / 2.0) as u16);
-
-                let player_color = Self::get_player_color_static(player.id);
-                
-                // If radius is very small (<= 1), just draw a single character
-                if screen_radius <= 1.0 {
-                    let cell = buffer.get_mut(x as u16 + area.x, y as u16 + area.y);
-                    cell.set_char('○');
-                    cell.set_fg(player_color);
-                } else {
-                    // Draw player as a filled circle for larger radius
-                    let radius_i32 = radius as i32;
-                    for dy in -radius_i32..=radius_i32 {
-                        for dx in -radius_i32..=radius_i32 {
-                            if dx * dx + dy * dy <= radius_i32 * radius_i32 {
-                                let px = x + dx;
-                                let py = y + dy;
-                                if px >= 0
-                                    && px < canvas_width as i32
-                                    && py >= 0
-                                    && py < canvas_height as i32
-                                {
-                                    let cell = buffer.get_mut(px as u16 + area.x, py as u16 + area.y);
-                                    cell.set_char('●');
-                                    cell.set_fg(player_color);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Draw player name above the circle
-                if y > 0 && !player.name.is_empty() {
-                    let name_offset = if screen_radius <= 1.0 { 1 } else { radius as i32 + 1 };
-                    let name_y = (y - name_offset).max(0) as u16;
-                    if name_y < canvas_height as u16 {
-                        let name_text = if player.name.len() > 10 {
-                            &player.name[..10]
-                        } else {
-                            &player.name
-                        };
-                        let name_x = (x - name_text.len() as i32 / 2).max(0) as u16;
-                        if name_x + name_text.len() as u16 <= canvas_width as u16 {
-                            // Draw name directly to buffer
-                            for (i, ch) in name_text.chars().enumerate() {
-                                if (name_x as usize + i) < canvas_width as usize {
-                                    let cell = buffer.get_mut(name_x + area.x + i as u16, name_y + area.y);
-                                    cell.set_char(ch);
-                                    cell.set_fg(player_color);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -274,6 +215,100 @@ impl RenderManager {
         let x = (world_x / world_w * screen_w) as i32;
         let y = (world_y / world_h * screen_h) as i32;
         (x, y)
+    }
+
+    /// Draw a single player on the screen
+    fn draw_player_static(
+        buffer: &mut ratatui::buffer::Buffer,
+        player: &shared::objects::PlayerSpec,
+        area: Rect,
+        world_width: f32,
+        world_height: f32,
+        canvas_width: f32,
+        canvas_height: f32,
+    ) {
+        let (x, y) = Self::world_to_screen_static(
+            player.x,
+            player.y,
+            world_width,
+            world_height,
+            canvas_width,
+            canvas_height,
+        );
+
+        if x < 0 || x >= canvas_width as i32 || y < 0 || y >= canvas_height as i32 {
+            return;
+        }
+
+        // Calculate screen radius from world radius (keep as f32 for precision)
+        let screen_radius = player.radius * canvas_width / world_width;
+        
+        // Clamp screen radius to reasonable bounds
+        let screen_radius = screen_radius.max(0.5).min(canvas_width.min(canvas_height) / 2.0);
+
+        let player_color = Self::get_player_color_static(player.id);
+        
+        // Draw player as a filled circle using color fill (pixel art style)
+        // Use f32 for precise circle calculation
+        let radius_f32 = screen_radius;
+        let radius_i32 = radius_f32.ceil() as i32;
+        
+        // For very small radius, just draw center point
+        if screen_radius <= 0.5 {
+            let cell = buffer.get_mut(x as u16 + area.x, y as u16 + area.y);
+            cell.set_char(' ');
+            cell.set_bg(player_color);
+        } else {
+            // Draw filled circle using background color
+            for dy in -radius_i32..=radius_i32 {
+                for dx in -radius_i32..=radius_i32 {
+                    // Use floating point distance check for accurate circle
+                    let dist_sq = (dx as f32) * (dx as f32) + (dy as f32) * (dy as f32);
+                    if dist_sq <= radius_f32 * radius_f32 {
+                        let px = x + dx;
+                        let py = y + dy;
+                        if px >= 0
+                            && px < canvas_width as i32
+                            && py >= 0
+                            && py < canvas_height as i32
+                        {
+                            let cell = buffer.get_mut(px as u16 + area.x, py as u16 + area.y);
+                            // Use space character with background color for pixel art effect
+                            cell.set_char(' ');
+                            cell.set_bg(player_color);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Draw player name above the circle
+        if y > 0 && !player.name.is_empty() {
+            let name_offset = if screen_radius <= 0.5 { 
+                1 
+            } else { 
+                screen_radius.ceil() as i32 + 1 
+            };
+            let name_y = (y - name_offset).max(0) as u16;
+            if name_y < canvas_height as u16 {
+                let name_text = if player.name.len() > 10 {
+                    &player.name[..10]
+                } else {
+                    &player.name
+                };
+                let name_x = (x - name_text.len() as i32 / 2).max(0) as u16;
+                if name_x + name_text.len() as u16 <= canvas_width as u16 {
+                    // Draw name directly to buffer
+                    for (i, ch) in name_text.chars().enumerate() {
+                        if (name_x as usize + i) < canvas_width as usize {
+                            let cell = buffer.get_mut(name_x + area.x + i as u16, name_y + area.y);
+                            cell.set_char(ch);
+                            cell.set_fg(player_color);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     fn get_player_color_static(player_id: u64) -> Color {
