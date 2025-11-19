@@ -14,7 +14,13 @@ pub struct PlayerSpec {
     pub radius: f32,
     pub score: u32,
     pub speed: f32,          // movement speed
-    pub sequence_number: u64 // counter for inputs / ordering
+    pub sequence_number: u64, // counter for inputs / ordering
+    #[serde(default)]
+    pub remaining_distance: f32, // distance left to move in current direction
+    #[serde(default)]
+    pub vx: f32,             // velocity x component
+    #[serde(default)]
+    pub vy: f32,             // velocity y component
 }
 
 /// Food dots on the map

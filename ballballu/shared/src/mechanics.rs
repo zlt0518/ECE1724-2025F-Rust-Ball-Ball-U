@@ -55,33 +55,43 @@ pub fn calculate_radius_from_score(score: u32, base_radius: f32) -> f32 {
 // 5. updatePosition: update player movement
 // =============================================
 
-/// Moves a player toward target input direction.
-/// dx, dy should be normalized values from client.
-///
-/// Example:
-///    - W pressed => (0, -1)
-///    - A pressed => (-1, 0)
-///    - W + A => normalized
+/// Moves a player with discrete distance-based movement.
+/// Consumes remaining_distance each frame and stops when complete.
 pub fn update_position(
     player: &mut PlayerSpec,
-    dx: f32,
-    dy: f32,
     speed: f32,
     delta_time_ms: f32
 ) {
-    // Normalize input direction
-    let mag = (dx * dx + dy * dy).sqrt();
-    let (nx, ny) = if mag > 0.0 {
-        (dx / mag, dy / mag)
-    } else {
-        (0.0, 0.0)
-    };
+    const WORLD_WIDTH: f32 = 2000.0;
+    const WORLD_HEIGHT: f32 = 2000.0;
 
-    // Distance = speed * time
-    let dt_sec = delta_time_ms / 1000.0;
-
-    player.x += nx * speed * dt_sec;
-    player.y += ny * speed * dt_sec;
+    // Only move if there's remaining distance
+    if player.remaining_distance > 0.0 {
+        let dt_sec = delta_time_ms / 1000.0;
+        let distance_this_frame = (speed * dt_sec).min(player.remaining_distance);
+        
+        // Calculate direction magnitude
+        let vel_mag = (player.vx * player.vx + player.vy * player.vy).sqrt();
+        if vel_mag > 0.0 {
+            let dx = (player.vx / vel_mag) * distance_this_frame;
+            let dy = (player.vy / vel_mag) * distance_this_frame;
+            
+            player.x += dx;
+            player.y += dy;
+            player.remaining_distance -= distance_this_frame;
+        }
+        
+        // Stop if movement complete
+        if player.remaining_distance <= 0.0 {
+            player.remaining_distance = 0.0;
+            player.vx = 0.0;
+            player.vy = 0.0;
+        }
+    }
+    
+    // Clamp position to world boundaries to prevent going off-screen
+    player.x = player.x.clamp(player.radius, WORLD_WIDTH - player.radius);
+    player.y = player.y.clamp(player.radius, WORLD_HEIGHT - player.radius);
 }
 
 

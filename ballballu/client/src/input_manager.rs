@@ -55,17 +55,12 @@ impl InputManager {
         let normalized_dx = if magnitude > 0.0 { dx / magnitude } else { 0.0 };
         let normalized_dy = if magnitude > 0.0 { dy / magnitude } else { 0.0 };
 
-        // Increment sequence number
-        let seq = SEQUENCE_NUMBER.fetch_add(1, Ordering::Relaxed) + 1;
-
-        // Send input message to server
-        let input = UserInput {
+        // Send discrete move command to server (50 pixels per keypress)
+        let msg = ClientMessage::Move {
             dx: normalized_dx,
             dy: normalized_dy,
-            sequence_number: seq,
+            distance: 50.0,
         };
-
-        let msg = ClientMessage::Input { input };
         let _ = self.input_tx.send(msg);
         false
     }

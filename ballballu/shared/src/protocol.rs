@@ -21,8 +21,11 @@ pub enum ClientMessage {
     /// New client wants to join with a username
     Join { name: String },
 
-    /// Movement input
+    /// Movement input (continuous, deprecated in favor of Move)
     Input { input: UserInput },
+
+    /// Discrete movement: move a fixed distance in direction
+    Move { dx: f32, dy: f32, distance: f32 },
 
     /// Client gracefully disconnects
     Quit,

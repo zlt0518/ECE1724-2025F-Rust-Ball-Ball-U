@@ -28,13 +28,13 @@ impl GameLoop {
             {
                 let mut gs = self.ws.game_state.lock().await;
                 
-                // Phase 4: Update player positions based on input
+                // Apply pending moves from input commands
+                gs.apply_pending_moves();
+                
+                // Phase 4: Update player positions based on remaining distance
                 let player_ids: Vec<u64> = gs.players.keys().cloned().collect();
                 let move_speed_base = gs.constants.move_speed_base;
                 for id in player_ids {
-                    // Get input first (immutable borrow)
-                    let (dx, dy) = gs.get_player_input(id);
-                    
                     // Then get mutable player reference
                     if let Some(player) = gs.players.get_mut(&id) {
                         // Calculate current speed based on score
@@ -44,8 +44,8 @@ impl GameLoop {
                         );
                         player.speed = current_speed;
                         
-                        // Update position using shared mechanics
-                        update_position(player, dx, dy, current_speed, tick_ms as f32);
+                        // Update position using shared mechanics (new signature)
+                        update_position(player, current_speed, tick_ms as f32);
                     }
                 }
 
