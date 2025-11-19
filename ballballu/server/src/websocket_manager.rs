@@ -46,9 +46,17 @@ impl WebSocketManager {
         let text = serde_json::to_string(&msg).unwrap();
         
         let conns = self.connections.lock().await;
+        let tick = if let ServerMessage::StateUpdate(ref state) = msg {
+            state.snapshot.tick
+        } else {
+            0
+        };
+        println!("[DEBUG] Broadcasting state to {} players (tick: {})", conns.len(), tick);
         for (id, tx) in conns.iter() {
             if tx.send(Message::Text(text.clone())).is_err() {
-                println!("Broadcast to player {} failed", id);
+                println!("[DEBUG] Broadcast to player {} failed", id);
+            } else {
+                println!("[DEBUG] Successfully sent state update to player {}", id);
             }
         }
     }

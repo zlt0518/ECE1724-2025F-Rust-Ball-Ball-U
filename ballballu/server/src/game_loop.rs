@@ -60,7 +60,12 @@ impl GameLoop {
             }
 
             // Phase 3: Broadcast snapshot every tick
+            println!("[DEBUG] GameLoop: About to broadcast state (tick: {})", {
+                let gs = self.ws.game_state.lock().await;
+                gs.tick
+            });
             self.ws.broadcast_state().await;
+            println!("[DEBUG] GameLoop: Broadcast completed");
         }
     }
 }
