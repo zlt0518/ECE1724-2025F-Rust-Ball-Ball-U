@@ -14,6 +14,7 @@ use crossterm::{
 use shared::GameSnapshot;
 use shared::objects::PlayerSpec;
 use std::io::{self, stdout};
+use std::time::Instant;
 
 pub struct RenderManager {
     terminal: Terminal<CrosstermBackend<std::io::Stdout>>,
@@ -40,17 +41,17 @@ impl RenderManager {
         })
     }
 
-    pub fn render(&mut self, snapshot: &GameSnapshot) -> io::Result<()> {
+    pub fn render(&mut self, snapshot: &GameSnapshot, received_at: Instant) -> io::Result<()> {
         let world_width = self.world_width;
         let world_height = self.world_height;
         self.terminal.draw(|f| {
-            Self::draw_game_static(f, snapshot, world_width, world_height);
+            Self::draw_game_static(f, snapshot, received_at, world_width, world_height);
         })?;
         //println!("[DEBUG] RenderManager::render completed successfully");
         Ok(())
     }
 
-    fn draw_game_static(f: &mut Frame, snapshot: &GameSnapshot, world_width: f32, world_height: f32) {
+    fn draw_game_static(f: &mut Frame, snapshot: &GameSnapshot, received_at: Instant, world_width: f32, world_height: f32) {
         let size = f.size();
 
         // Create layout: game area in center, info on sides
@@ -86,13 +87,13 @@ impl RenderManager {
 
         // Draw players and dots inside the canvas
         let inner_canvas = canvas.inner(Margin::new(1, 1));
-        Self::draw_objects_static(f, snapshot, inner_canvas, world_width, world_height);
+        Self::draw_objects_static(f, snapshot, inner_canvas, received_at, world_width, world_height);
 
         // Draw info panel
         Self::draw_info_panel_static(f, snapshot, info_panel);
     }
 
-    fn draw_objects_static(f: &mut Frame, snapshot: &GameSnapshot, area: Rect, world_width: f32, world_height: f32) {
+    fn draw_objects_static(f: &mut Frame, snapshot: &GameSnapshot, area: Rect, received_at: Instant, world_width: f32, world_height: f32) {
         let canvas_width = area.width as f32;
         let canvas_height = area.height as f32;
         let buffer = f.buffer_mut();
@@ -153,6 +154,7 @@ impl RenderManager {
                 canvas_width,
                 canvas_height,
                 prediction_ms,
+                received_at,
             );
         }
     }
@@ -216,8 +218,8 @@ impl RenderManager {
         screen_w: f32,
         screen_h: f32,
     ) -> (i32, i32) {
-        let x = (world_x / world_w * screen_w).round() as i32;
-        let y = (world_y / world_h * screen_h).round() as i32;
+        let x = (world_x / world_w * screen_w).floor() as i32;
+        let y = (world_y / world_h * screen_h).floor() as i32;
         (x, y)
     }
 
@@ -231,14 +233,20 @@ impl RenderManager {
         canvas_width: f32,
         canvas_height: f32,
         prediction_ms: f32,
+        received_at: Instant,
     ) {
         // Apply a small prediction based on velocity to smooth between snapshots
-        let pred_x = player.x + player.vx * (prediction_ms / 1000.0);
-        let pred_y = player.y + player.vy * (prediction_ms / 1000.0);
+        // Amount of time to predict forward
+        let pred_seconds = received_at.elapsed().as_secs_f32();
 
+        // Always predict from the authoritative server snapshot
+        let world_x = player.x + player.vx * pred_seconds;
+        let world_y = player.y + player.vy * pred_seconds;
+
+        // Convert predicted world coords into screen coords
         let (x, y) = Self::world_to_screen_static(
-            pred_x,
-            pred_y,
+            world_x,
+            world_y,
             world_width,
             world_height,
             canvas_width,

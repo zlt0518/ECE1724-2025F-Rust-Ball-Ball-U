@@ -1,11 +1,14 @@
 mod render_manager;
 mod input_manager;
+mod websocket;
 
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
 use shared::{GameSnapshot, protocol::{ServerMessage, ClientMessage}};
 use serde_json;
+use crate::websocket::ClientSnapshot;
+use std::time::Instant;
 
 #[tokio::main]
 async fn main() {
@@ -43,7 +46,7 @@ async fn main() {
     let (mut write, mut read) = ws_stream.split();
 
     // Channel to send game snapshots from websocket task to main loop
-    let (snapshot_tx, mut snapshot_rx) = mpsc::unbounded_channel::<GameSnapshot>();
+    let (snapshot_tx, mut snapshot_rx) = mpsc::unbounded_channel::<ClientSnapshot>();
     
     // Channel to send input commands to server
     let (input_tx, mut input_rx) = mpsc::unbounded_channel::<ClientMessage>();
@@ -64,8 +67,12 @@ async fn main() {
                         Ok(server_msg) => {
                             // Extract GameSnapshot from StateUpdate
                             if let ServerMessage::StateUpdate(state_update) = server_msg {
+
                                 let snapshot = state_update.snapshot;
-                                if let Err(_) = snapshot_tx.send(snapshot) {
+                                if snapshot_tx
+                                    .send(ClientSnapshot { snapshot, received_at: Instant::now() })
+                                    .is_err()
+                                {
                                     break;
                                 }
                             }
@@ -74,7 +81,9 @@ async fn main() {
                             // Try direct GameSnapshot parse as fallback (for debugging)
                             match serde_json::from_str::<GameSnapshot>(&text) {
                                 Ok(snapshot) => {
-                                    let _ = snapshot_tx.send(snapshot);
+                                    let _ = snapshot_tx
+                                                .send(ClientSnapshot { snapshot, received_at: Instant::now() })
+                                                .ok();
                                 }
                                 Err(_e2) => {
                                     //println!("[DEBUG] Fallback: Direct GameSnapshot parse also failed: {:?}", e2);
@@ -109,6 +118,7 @@ async fn main() {
     
     // Main loop: render game state and handle input
     let mut should_exit = false;
+    let mut latest_snapshot: Option<ClientSnapshot> = None;
     loop {
         // Poll for keyboard input (non-blocking)
         if input_manager.poll_input() {
@@ -118,23 +128,19 @@ async fn main() {
         tokio::select! {
             // Receive game snapshot and render
             snapshot = snapshot_rx.recv() => {
-                match snapshot {
-                    Some(snap) => {
-                        let mut rm = render_manager_arc.lock().unwrap();
-                        if let Err(e) = rm.render(&snap) {
-                            eprintln!("Render error: {:?}", e);
-                            break;
-                        }
-                    }
-                    None => {
-                        break;
-                    }
+                if let Some(snap) = snapshot {
+                    latest_snapshot = Some(snap);
                 }
             }
             // Check if tasks finished or we should exit
             _ = tokio::time::sleep(tokio::time::Duration::from_millis(16)) => {
                 if should_exit || read_handle.is_finished() || write_handle.is_finished() {
                     break;
+                }
+                // Every 16 ms, render the most recent snapshot using prediction
+                if let Some(ref snap) = latest_snapshot {
+                    let mut rm = render_manager_arc.lock().unwrap();
+                    rm.render(&snap.snapshot, snap.received_at);
                 }
             }
         }
