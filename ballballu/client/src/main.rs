@@ -23,6 +23,9 @@ async fn main() {
             return;
         }
     };
+    // Wrap render manager so both input + main loop can share it
+    use std::sync::{Arc, Mutex};
+    let render_manager_arc = Arc::new(Mutex::new(render_manager));
 
     println!("Connecting to {}", url);
 
@@ -46,7 +49,10 @@ async fn main() {
     let (input_tx, mut input_rx) = mpsc::unbounded_channel::<ClientMessage>();
     
     // Initialize input manager
-    let input_manager = input_manager::InputManager::new(input_tx.clone());
+    let input_manager = input_manager::InputManager::new(
+        input_tx.clone(),
+        render_manager_arc.clone(),
+    );
 
     // Spawn a task to receive messages from the server
     let read_handle = tokio::spawn(async move {
@@ -114,7 +120,8 @@ async fn main() {
             snapshot = snapshot_rx.recv() => {
                 match snapshot {
                     Some(snap) => {
-                        if let Err(e) = render_manager.render(&snap) {
+                        let mut rm = render_manager_arc.lock().unwrap();
+                        if let Err(e) = rm.render(&snap) {
                             eprintln!("Render error: {:?}", e);
                             break;
                         }

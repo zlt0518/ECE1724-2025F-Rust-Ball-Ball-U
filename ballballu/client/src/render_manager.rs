@@ -12,6 +12,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use shared::GameSnapshot;
+use shared::objects::PlayerSpec;
 use std::io::{self, stdout};
 
 pub struct RenderManager {
@@ -140,6 +141,8 @@ impl RenderManager {
         }
 
         // Draw players
+        // Use one-tick prediction (based on server tick interval) to smooth movement
+        let prediction_ms = snapshot.constants.tick_interval_ms as f32;
         for player in &snapshot.players {
             Self::draw_player_static(
                 buffer,
@@ -149,6 +152,7 @@ impl RenderManager {
                 world_height,
                 canvas_width,
                 canvas_height,
+                prediction_ms,
             );
         }
     }
@@ -212,8 +216,8 @@ impl RenderManager {
         screen_w: f32,
         screen_h: f32,
     ) -> (i32, i32) {
-        let x = (world_x / world_w * screen_w) as i32;
-        let y = (world_y / world_h * screen_h) as i32;
+        let x = (world_x / world_w * screen_w).round() as i32;
+        let y = (world_y / world_h * screen_h).round() as i32;
         (x, y)
     }
 
@@ -226,10 +230,15 @@ impl RenderManager {
         world_height: f32,
         canvas_width: f32,
         canvas_height: f32,
+        prediction_ms: f32,
     ) {
+        // Apply a small prediction based on velocity to smooth between snapshots
+        let pred_x = player.x + player.vx * (prediction_ms / 1000.0);
+        let pred_y = player.y + player.vy * (prediction_ms / 1000.0);
+
         let (x, y) = Self::world_to_screen_static(
-            player.x,
-            player.y,
+            pred_x,
+            pred_y,
             world_width,
             world_height,
             canvas_width,
@@ -248,23 +257,34 @@ impl RenderManager {
 
         let player_color = Self::get_player_color_static(player.id);
         
-        // Draw player as a filled circle using color fill (pixel art style)
-        // Use f32 for precise circle calculation
-        let radius_f32 = screen_radius;
-        let radius_i32 = radius_f32.ceil() as i32;
-        
+        // terminal cell is ~2x taller than wide
+        let char_aspect_ratio: f32 = 2.0;
+
+        // Use separate radii for x and y to produce an ellipse that looks like a circle
+        let radius_x = screen_radius;
+        let radius_y = screen_radius * char_aspect_ratio;
+
+        // Use f32 for precise circle/ellipse calculation
+        let radius_x_i32 = radius_x.ceil() as i32;
+        let radius_y_i32 = radius_y.ceil() as i32;
+
         // For very small radius, just draw center point
         if screen_radius <= 0.5 {
             let cell = buffer.get_mut(x as u16 + area.x, y as u16 + area.y);
-            cell.set_char(' ');
-            cell.set_bg(player_color);
+            cell.set_char('█');
+            cell.set_fg(player_color);
         } else {
-            // Draw filled circle using background color
-            for dy in -radius_i32..=radius_i32 {
-                for dx in -radius_i32..=radius_i32 {
-                    // Use floating point distance check for accurate circle
-                    let dist_sq = (dx as f32) * (dx as f32) + (dy as f32) * (dy as f32);
-                    if dist_sq <= radius_f32 * radius_f32 {
+            // Draw filled circle using multi-cell approach: dx*dx + dy*dy <= r*r
+            // For each terminal cell, check if it's within the circle radius
+            let radius_sq = screen_radius * screen_radius;
+
+            for dy in -radius_x_i32..=radius_x_i32 {
+                for dx in -radius_x_i32..=radius_x_i32 {
+                    // Calculate distance from center for this cell
+                    let dx_f = dx as f32;
+                    let dy_f = dy as f32 * char_aspect_ratio;
+                    // Check if this cell is within the circle
+                    if dx_f * dx_f + dy_f * dy_f <= radius_sq {
                         let px = x + dx;
                         let py = y + dy;
                         if px >= 0
@@ -273,9 +293,9 @@ impl RenderManager {
                             && py < canvas_height as i32
                         {
                             let cell = buffer.get_mut(px as u16 + area.x, py as u16 + area.y);
-                            // Use space character with background color for pixel art effect
-                            cell.set_char(' ');
-                            cell.set_bg(player_color);
+                            // Use block character instead of background color
+                            cell.set_char('█');
+                            cell.set_fg(player_color);
                         }
                     }
                 }
@@ -324,6 +344,45 @@ impl RenderManager {
         ];
         colors[(player_id as usize) % colors.len()]
     }
+
+    pub fn cell_distance(&mut self, dx: f32, dy: f32) -> f32 {
+        // Get the current terminal frame size
+        let size = self
+            .terminal
+            .size()
+            .expect("Failed to read terminal size");
+
+        // Recompute the same canvas layout used in draw()
+        let chunks = Layout::default()
+            .direction(ratatui::layout::Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(10),
+                Constraint::Percentage(80),
+                Constraint::Percentage(10),
+            ])
+            .split(size);
+
+        let game_area = chunks[1];
+
+        let vertical_chunks = Layout::default()
+            .direction(ratatui::layout::Direction::Vertical)
+            .constraints([
+                Constraint::Percentage(85),
+                Constraint::Percentage(15),
+            ])
+            .split(game_area);
+
+        let canvas = vertical_chunks[0];
+        let canvas_w = canvas.width as f32;
+        let canvas_h = canvas.height as f32;
+
+        // 1 terminal cell worth of world-units
+        if dx.abs() > 0.0 {
+            self.world_width / canvas_w // horizontal keypress
+        } else {
+            self.world_height / canvas_h // vertical keypress
+        }
+    }
 }
 
 impl Drop for RenderManager {
@@ -337,3 +396,17 @@ impl Drop for RenderManager {
     }
 }
 
+fn world_units_per_screen_cell(
+    world_w: f32,
+    world_h: f32,
+    canvas_w: f32,
+    canvas_h: f32,
+    dx: f32,
+    dy: f32,
+) -> f32 {
+    if dx.abs() > 0.0 {
+        world_w / canvas_w    // horizontal: 1 cell worth of world-units
+    } else {
+        world_h / canvas_h    // vertical: 1 cell worth of world-units
+    }
+}
