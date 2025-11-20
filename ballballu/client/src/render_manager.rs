@@ -279,8 +279,8 @@ impl RenderManager {
         // For very small radius, just draw center point
         if screen_radius <= 0.5 {
             let cell = buffer.get_mut(x as u16 + area.x, y as u16 + area.y);
-            cell.set_char('█');
-            cell.set_fg(player_color);
+            cell.set_char(' ');
+            cell.set_bg(player_color);
         } else {
             // Draw filled circle using multi-cell approach: dx*dx + dy*dy <= r*r
             // For each terminal cell, check if it's within the circle radius
@@ -302,8 +302,8 @@ impl RenderManager {
                         {
                             let cell = buffer.get_mut(px as u16 + area.x, py as u16 + area.y);
                             // Use block character instead of background color
-                            cell.set_char('█');
-                            cell.set_fg(player_color);
+                            cell.set_char(' ');
+                            cell.set_bg(player_color);
                         }
                     }
                 }
