@@ -13,6 +13,7 @@ use std::time::Instant;
 #[tokio::main]
 async fn main() {
     let url = "ws://127.0.0.1:8000";
+    let (shutdown_tx, mut shutdown_rx) = mpsc::unbounded_channel::<()>();
     
     // Initialize render manager with default world size
     // You may want to get these from the server's initial message
@@ -104,6 +105,8 @@ async fn main() {
                 }
             }
         }
+        // Notify main loop that server disconnected
+        let _ = shutdown_tx.send(());
     });
 
     // Spawn a task to send input commands to server
@@ -131,6 +134,11 @@ async fn main() {
                 if let Some(snap) = snapshot {
                     latest_snapshot = Some(snap);
                 }
+            }
+            // Detect server disconnection
+            _ = shutdown_rx.recv() => {
+                println!("Server disconnected — closing client.");
+                break;
             }
             // Check if tasks finished or we should exit
             _ = tokio::time::sleep(tokio::time::Duration::from_millis(16)) => {
