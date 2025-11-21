@@ -1,82 +1,71 @@
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use shared::protocol::ClientMessage;
+use macroquad::prelude::*;
+use shared::protocol::{ClientMessage, UserInput};
 use tokio::sync::mpsc;
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::render_manager::RenderManager;
+static SEQUENCE_NUMBER: AtomicU64 = AtomicU64::new(0);
 
 pub struct InputManager {
     input_tx: mpsc::UnboundedSender<ClientMessage>,
-    render: Arc<Mutex<RenderManager>>,
 }
 
 impl InputManager {
-    pub fn new(
-        input_tx: mpsc::UnboundedSender<ClientMessage>,
-        render: Arc<Mutex<RenderManager>>,
-    ) -> Self {
-        Self { input_tx, render }
+    pub fn new(input_tx: mpsc::UnboundedSender<ClientMessage>) -> Self {
+        Self { input_tx }
     }
 
-    /// Poll for keyboard input and convert to movement commands
+    /// Poll for keyboard input and send to server
+    /// Returns true if the application should exit
     pub fn poll_input(&self) -> bool {
-        let mut should_exit = false;
+        let mut dx = 0.0;
+        let mut dy = 0.0;
+        let mut has_input = false;
 
-        while event::poll(std::time::Duration::from_millis(0)).unwrap_or(false) {
-            if let Ok(Event::Key(key_event)) = event::read() {
-                if key_event.kind == KeyEventKind::Press {
-                    if self.handle_key(key_event) {
-                        should_exit = true;
-                    }
-                }
-            } else {
-                break;
-            }
+        // WASD keys
+        if is_key_down(KeyCode::W) || is_key_down(KeyCode::Up) {
+            dy = -1.0;
+            has_input = true;
+        }
+        if is_key_down(KeyCode::S) || is_key_down(KeyCode::Down) {
+            dy = 1.0;
+            has_input = true;
+        }
+        if is_key_down(KeyCode::A) || is_key_down(KeyCode::Left) {
+            dx = -1.0;
+            has_input = true;
+        }
+        if is_key_down(KeyCode::D) || is_key_down(KeyCode::Right) {
+            dx = 1.0;
+            has_input = true;
         }
 
-        should_exit
-    }
+        // ESC to quit
+        if is_key_pressed(KeyCode::Escape) {
+            let _ = self.input_tx.send(ClientMessage::Quit);
+            return true;
+        }
 
-    fn handle_key(&self, key_event: KeyEvent) -> bool {
-        let (dx, dy): (f32, f32) = match key_event.code {
-            // WASD
-            KeyCode::Char('w') | KeyCode::Char('W') => (0.0, -1.0),
-            KeyCode::Char('s') | KeyCode::Char('S') => (0.0, 1.0),
-            KeyCode::Char('a') | KeyCode::Char('A') => (-1.0, 0.0),
-            KeyCode::Char('d') | KeyCode::Char('D') => (1.0, 0.0),
+        if has_input {
+            // Normalize diagonal movement
+            let magnitude = ((dx * dx + dy * dy) as f32).sqrt();
+            let normalized_dx = if magnitude > 0.0 { dx / magnitude } else { 0.0 };
+            let normalized_dy = if magnitude > 0.0 { dy / magnitude } else { 0.0 };
 
-            // Arrows
-            KeyCode::Up => (0.0, -1.0),
-            KeyCode::Down => (0.0, 1.0),
-            KeyCode::Left => (-1.0, 0.0),
-            KeyCode::Right => (1.0, 0.0),
+            // Increment sequence number
+            let seq = SEQUENCE_NUMBER.fetch_add(1, Ordering::Relaxed) + 1;
 
-            // Quit
-            KeyCode::Esc => {
-                let _ = self.input_tx.send(ClientMessage::Quit);
-                return true;
-            }
+            // Send continuous input message to server
+            // Server will handle speed calculation based on player's score using mechanics
+            let input = UserInput {
+                dx: normalized_dx,
+                dy: normalized_dy,
+                sequence_number: seq,
+            };
 
-            _ => return false,
-        };
+            let msg = ClientMessage::Input { input };
+            let _ = self.input_tx.send(msg);
+        }
 
-        let magnitude = (dx * dx + dy * dy).sqrt();
-        let normalized_dx = if magnitude > 0.0 { dx / magnitude } else { 0.0 };
-        let normalized_dy = if magnitude > 0.0 { dy / magnitude } else { 0.0 };
-
-        // Distance = EXACTLY ONE SCREEN CELL
-        let distance = {
-            let mut rm = self.render.lock().unwrap();
-            rm.cell_distance(dx, dy)
-        };
-
-        let msg = ClientMessage::Move {
-            dx: normalized_dx,
-            dy: normalized_dy,
-            distance,
-        };
-
-        let _ = self.input_tx.send(msg);
         false
     }
 }
