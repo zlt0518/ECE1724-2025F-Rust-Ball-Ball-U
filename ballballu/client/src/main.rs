@@ -2,6 +2,7 @@ mod render_manager;
 mod input_manager;
 mod websocket;
 
+use tokio::runtime::Runtime;
 use macroquad::prelude::*;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use futures_util::{SinkExt, StreamExt};
@@ -23,6 +24,9 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    // +++Create tokio runtime manually (macroquad does NOT supply a reactor)
+    let rt = Runtime::new().expect("Failed to create Tokio runtime");
+
     let url = "ws://127.0.0.1:8000";
     
     // Initialize render manager with default world size
@@ -45,7 +49,8 @@ async fn main() {
     next_frame().await;
 
     // Connect to WebSocket server
-    let (ws_stream, _) = match connect_async(url).await {
+    // let (ws_stream, _) = match connect_async(url).await {
+    let (ws_stream, _) = match rt.block_on(async { connect_async(url).await }) {
         Ok(c) => {
             println!("Successfully connected to server");
             c
@@ -100,7 +105,7 @@ async fn main() {
     let input_manager = input_manager::InputManager::new(input_tx.clone());
 
     // Spawn a task to receive messages from the server
-    let read_handle = tokio::spawn(async move {
+    let read_handle = rt.spawn(async move {
         while let Some(msg) = read.next().await {
             match msg {
                 Ok(Message::Text(text)) => {
@@ -160,7 +165,7 @@ async fn main() {
     });
 
     // Spawn a task to send input commands to server
-    let write_handle = tokio::spawn(async move {
+    let write_handle = rt.spawn(async move {
         while let Some(msg) = input_rx.recv().await {
             let json = serde_json::to_string(&msg).unwrap();
             if write.send(Message::Text(json)).await.is_err() {
