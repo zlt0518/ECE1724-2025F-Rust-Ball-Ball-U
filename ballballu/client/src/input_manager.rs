@@ -14,12 +14,12 @@ impl InputManager {
 
     /// Poll for keyboard input and send a single-step Move to the server.
     /// `player_radius` is used to scale the step distance; if `None`, a default
-    /// base distance is used. Returns true if the application should exit.
-    pub fn poll_input(&self, player_radius: Option<f32>) -> bool {
+    /// base distance is used. Returns (should_exit, space_pressed).
+    pub fn poll_input(&self, player_radius: Option<f32>) -> (bool, bool) {
         // Space to send Ready message
         if is_key_pressed(KeyCode::Space) {
             let _ = self.input_tx.send(ClientMessage::Ready);
-            return false;
+            return (false, true);
         }
 
         let mut dx = 0.0f32;
@@ -47,7 +47,7 @@ impl InputManager {
         // ESC to quit
         if is_key_pressed(KeyCode::Escape) {
             let _ = self.input_tx.send(ClientMessage::Quit);
-            return true;
+            return (true, false);
         }
 
         if has_press {
@@ -66,6 +66,6 @@ impl InputManager {
             let _ = self.input_tx.send(msg);
         }
 
-        false
+        (false, false)
     }
 }

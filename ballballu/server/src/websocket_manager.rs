@@ -123,6 +123,17 @@ impl WebSocketManager {
                     println!("Failed to send Welcome message to player {}", id);
                 }
 
+                // Send current game snapshot to the new player so they see the current state
+                {
+                    let gs = gs_state.lock().await;
+                    let snapshot = gs.to_snapshot();
+                    let state_msg = ServerMessage::StateUpdate(shared::protocol::StateUpdateMessage { snapshot });
+                    let state_text = serde_json::to_string(&state_msg).unwrap();
+                    if tx.send(Message::Text(state_text)).is_err() {
+                        println!("Failed to send initial state update to player {}", id);
+                    }
+                }
+
                 // 3. 读消息
                 //    无论是 Close 还是错误，最后都会执行 remove_player
                 while let Some(msg_result) = ws_rx.next().await {

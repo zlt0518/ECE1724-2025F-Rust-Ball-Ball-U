@@ -201,6 +201,7 @@ async fn main() {
     let mut connection_lost = false;
     let mut frames_without_update = 0;
     let mut player_id: Option<u64> = None;
+    let mut client_ready = false;  // Track if this client has pressed space
 
     loop {
         // Check for shutdown signal (non-blocking)
@@ -214,8 +215,12 @@ async fn main() {
         let player_radius = latest_snapshot
             .as_ref()
             .and_then(|s| s.snapshot.players.first().map(|p| p.radius));
-        if input_manager.poll_input(player_radius) {
+        let (should_exit_input, space_pressed) = input_manager.poll_input(player_radius);
+        if should_exit_input {
             should_exit = true;
+        }
+        if space_pressed {
+            client_ready = true;
         }
 
         // Try to receive player_id (non-blocking)
@@ -238,7 +243,7 @@ async fn main() {
 
         // Render the game
         if let Some(ref snap) = latest_snapshot {
-            render_manager.render(&snap.snapshot, snap.received_at, player_id);
+            render_manager.render(&snap.snapshot, snap.received_at, player_id, client_ready);
             
             // Show warning if no updates for a while
             if frames_without_update > 120 {

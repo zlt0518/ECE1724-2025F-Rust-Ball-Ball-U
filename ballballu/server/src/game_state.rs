@@ -311,8 +311,8 @@ impl GameState {
                 self.ready_players.insert(id, true);
                 println!("GameState: Player {} is ready", id);
                 
-                // Check if all players are ready
-                if self.all_players_ready() {
+                // Check if all players are ready (and at least 1 player connected)
+                if self.all_players_ready() && !self.players.is_empty() {
                     self.status = GameStatus::Playing;
                     println!("GameState: All players ready! Starting game!");
                 }
