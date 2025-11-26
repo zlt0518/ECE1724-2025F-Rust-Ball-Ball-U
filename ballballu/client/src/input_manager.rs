@@ -14,10 +14,10 @@ impl InputManager {
 
     /// Poll for keyboard input and send a single-step Move to the server.
     /// `player_radius` is used to scale the step distance; if `None`, a default
-    /// base distance is used. Returns (should_exit, space_pressed).
+    /// base distance is used. Returns (should_exit, enter_pressed).
     pub fn poll_input(&self, player_radius: Option<f32>) -> (bool, bool) {
-        // Space to send Ready message
-        if is_key_pressed(KeyCode::Space) {
+        // Enter to send Ready message
+        if is_key_pressed(KeyCode::Enter) {
             let _ = self.input_tx.send(ClientMessage::Ready);
             return (false, true);
         }

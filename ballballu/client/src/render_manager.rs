@@ -399,7 +399,7 @@ impl RenderManager {
         draw_rectangle(0.0, 0.0, screen_width, screen_height, Color::from_rgba(0, 0, 0, 200));
 
         // Draw title
-        let title = "BALL BALL U";
+        let title = "ECE1724:: RUST:: BALL BALL U";
         let title_size = 80.0;
         let title_dims = measure_text(title, None, title_size as u16, 1.0);
         let title_x = screen_width / 2.0 - title_dims.width / 2.0;
@@ -407,15 +407,31 @@ impl RenderManager {
         draw_text(title, title_x, title_y, title_size, Color::from_rgba(100, 255, 100, 255));
 
         // Draw subtitle
-        let subtitle = "A Multiplayer Agar.io Clone";
+        let subtitle = "University of Toronto";
         let subtitle_size = 30.0;
         let subtitle_dims = measure_text(subtitle, None, subtitle_size as u16, 1.0);
         let subtitle_x = screen_width / 2.0 - subtitle_dims.width / 2.0;
         let subtitle_y = title_y + 80.0;
         draw_text(subtitle, subtitle_x, subtitle_y, subtitle_size, Color::from_rgba(150, 150, 255, 255));
 
+        // Draw author information
+        let authors = vec![
+            "Litao(John) Zhou - 1006013092",
+            "Siyu Shao - 1007147204",
+            "Chuyue Zhang - 1005728303",
+        ];
+        let author_size = 20.0;
+        let author_y_start = subtitle_y + 60.0;
+        
+        for (i, author) in authors.iter().enumerate() {
+            let author_dims = measure_text(author, None, author_size as u16, 1.0);
+            let author_x = screen_width / 2.0 - author_dims.width / 2.0;
+            let author_y = author_y_start + (i as f32 * 25.0);
+            draw_text(author, author_x, author_y, author_size, Color::from_rgba(200, 200, 200, 255));
+        }
+
         // Draw instructions
-        let instruction = "Press SPACE to Start";
+        let instruction = "Press ENTER to Start";
         let instruction_size = 40.0;
         let instruction_dims = measure_text(instruction, None, instruction_size as u16, 1.0);
         let instruction_x = screen_width / 2.0 - instruction_dims.width / 2.0;
@@ -425,7 +441,7 @@ impl RenderManager {
         // Draw controls hint
         let controls = "Use WASD or Arrow Keys to move\nESC to quit";
         let controls_size = 20.0;
-        let controls_y = screen_height - 80.0;
+        let controls_y = screen_height - 100.0;
         draw_text(controls, 20.0, controls_y, controls_size, Color::from_rgba(200, 200, 200, 200));
     }
 
@@ -442,7 +458,7 @@ impl RenderManager {
         draw_text(title, title_x, title_y, title_size, Color::from_rgba(255, 100, 100, 255));
 
         // Draw restart instruction
-        let restart = "Press SPACE to Return to Start";
+        let restart = "Press ENTER to Return to Start";
         let restart_size = 30.0;
         let restart_dims = measure_text(restart, None, restart_size as u16, 1.0);
         let restart_x = screen_width / 2.0 - restart_dims.width / 2.0;
