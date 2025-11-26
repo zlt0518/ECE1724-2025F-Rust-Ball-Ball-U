@@ -41,32 +41,196 @@ impl GameState {
         gs
     }
 
-    /// Phase 5: Spawn initial dots on the map
-    fn spawn_initial_dots(&mut self, count: usize) {
+    /// Helper function to calculate distance between two points
+    fn distance(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
+        ((x1 - x2).powi(2) + (y1 - y2).powi(2)).sqrt()
+    }
+
+    /// Find an empty position that doesn't overlap with any players or dots
+    /// Returns (x, y) if found, or None if couldn't find after max_attempts
+    fn find_empty_position(
+        &self,
+        radius: f32,
+        max_attempts: usize,
+    ) -> Option<(f32, f32)> {
         let mut rng = rand::thread_rng();
         let world_width = 2000.0;
         let world_height = 2000.0;
+        let min_x = radius;
+        let max_x = world_width - radius;
+        let min_y = radius;
+        let max_y = world_height - radius;
+
+        for _ in 0..max_attempts {
+            let x = rng.gen_range(min_x..max_x);
+            let y = rng.gen_range(min_y..max_y);
+
+            // Check collision with players
+            let mut collides = false;
+            for player in self.players.values() {
+                let d = Self::distance(x, y, player.x, player.y);
+                if d < (radius + player.radius) {
+                    collides = true;
+                    break;
+                }
+            }
+
+            if collides {
+                continue;
+            }
+
+            // Check collision with dots
+            for dot in self.dots.values() {
+                let d = Self::distance(x, y, dot.x, dot.y);
+                if d < (radius + dot.radius) {
+                    collides = true;
+                    break;
+                }
+            }
+
+            if !collides {
+                return Some((x, y));
+            }
+        }
+
+        // Fallback: return center position if all attempts failed
+        Some((world_width / 2.0, world_height / 2.0))
+    }
+
+    /// Phase 5: Spawn initial dots on the map
+    /// Generates dots with three different score values: 2 (blue), 5 (yellow), 10 (red)
+    fn spawn_initial_dots(&mut self, count: usize) {
+        let mut rng = rand::thread_rng();
+        
+        // Dot configurations: (score, color, radius)
+        let dot_configs = [
+            (2, (100, 150, 255), 4.0),   // Blue, small
+            (5, (255, 255, 100), 6.0),   // Yellow, medium
+            (10, (255, 100, 100), 8.0),  // Red, large
+        ];
+        
         for _ in 0..count {
+            // Randomly select a dot type
+            let config = dot_configs[rng.gen_range(0..dot_configs.len())];
+            let (score, color, radius) = config;
+            
+            // Find empty position for this dot
+            if let Some((x, y)) = self.find_empty_position(radius, 100) {
+                let id = self.next_dot_id;
+                self.next_dot_id += 1;
+                self.dots.insert(id, Dot {
+                    id,
+                    x,
+                    y,
+                    radius,
+                    color,
+                    score,
+                });
+            } else {
+                // If can't find empty position, still create dot at random position
+                // (shouldn't happen often with 150 dots in 2000x2000 world)
+                let world_width = 2000.0;
+                let world_height = 2000.0;
+                let id = self.next_dot_id;
+                self.next_dot_id += 1;
+                self.dots.insert(id, Dot {
+                    id,
+                    x: rng.gen_range(radius..(world_width - radius)),
+                    y: rng.gen_range(radius..(world_height - radius)),
+                    radius,
+                    color,
+                    score,
+                });
+            }
+        }
+    }
+
+    /// Spawn a new dot at an empty position to maintain total dot count
+    /// Returns true if successfully spawned, false otherwise
+    pub fn spawn_new_dot(&mut self) -> bool {
+        let mut rng = rand::thread_rng();
+        
+        // Dot configurations: (score, color, radius)
+        let dot_configs = [
+            (2, (100, 150, 255), 4.0),   // Blue, small
+            (5, (255, 255, 100), 6.0),   // Yellow, medium
+            (10, (255, 100, 100), 8.0),  // Red, large
+        ];
+        
+        // Randomly select a dot type
+        let config = dot_configs[rng.gen_range(0..dot_configs.len())];
+        let (score, color, radius) = config;
+        
+        // Find empty position for this dot
+        if let Some((x, y)) = self.find_empty_position(radius, 100) {
             let id = self.next_dot_id;
             self.next_dot_id += 1;
             self.dots.insert(id, Dot {
                 id,
-                x: rng.gen_range(0.0..world_width),
-                y: rng.gen_range(0.0..world_height),
-                radius: self.constants.dot_radius,
-                color: (255, 100, 100), // Red dots
+                x,
+                y,
+                radius,
+                color,
+                score,
             });
+            true
+        } else {
+            // If can't find empty position, try a few more times with random positions
+            let world_width = 2000.0;
+            let world_height = 2000.0;
+            for _ in 0..10 {
+                let x = rng.gen_range(radius..(world_width - radius));
+                let y = rng.gen_range(radius..(world_height - radius));
+                
+                // Quick check if position is empty
+                let mut collides = false;
+                for player in self.players.values() {
+                    let d = Self::distance(x, y, player.x, player.y);
+                    if d < (radius + player.radius) {
+                        collides = true;
+                        break;
+                    }
+                }
+                if !collides {
+                    for dot in self.dots.values() {
+                        let d = Self::distance(x, y, dot.x, dot.y);
+                        if d < (radius + dot.radius) {
+                            collides = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if !collides {
+                    let id = self.next_dot_id;
+                    self.next_dot_id += 1;
+                    self.dots.insert(id, Dot {
+                        id,
+                        x,
+                        y,
+                        radius,
+                        color,
+                        score,
+                    });
+                    return true;
+                }
+            }
+            false
         }
     }
 
     /// Add new player when connected
     pub fn add_player(&mut self, id: u64) {
+        let base_radius = 10.0;
+        let (x, y) = self.find_empty_position(base_radius, 100)
+            .unwrap_or((1000.0, 1000.0)); // Fallback to center if all attempts fail
+        
         let p = PlayerSpec {
             id,
             name: format!("Player{}", id),
-            x: 400.0,
-            y: 300.0,
-            radius: 10.0,
+            x,
+            y,
+            radius: base_radius,
             speed: self.constants.move_speed_base,
             score: 0,
             sequence_number: 0,
@@ -77,7 +241,7 @@ impl GameState {
         self.players.insert(id, p);
         // Phase 4: Initialize input to zero
         self.player_inputs.insert(id, PlayerInput { dx: 0.0, dy: 0.0, pending_move: None });
-        println!("GameState: Player {} added", id);
+        println!("GameState: Player {} added at ({}, {})", id, x, y);
     }
 
     /// Remove player when disconnected
