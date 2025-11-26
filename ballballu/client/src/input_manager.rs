@@ -1,82 +1,65 @@
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use macroquad::prelude::*;
+use macroquad::prelude::{is_key_pressed, KeyCode};
 use shared::protocol::ClientMessage;
 use tokio::sync::mpsc;
-use std::sync::{Arc, Mutex};
-
-use crate::render_manager::RenderManager;
 
 pub struct InputManager {
     input_tx: mpsc::UnboundedSender<ClientMessage>,
-    render: Arc<Mutex<RenderManager>>,
 }
 
 impl InputManager {
-    pub fn new(
-        input_tx: mpsc::UnboundedSender<ClientMessage>,
-        render: Arc<Mutex<RenderManager>>,
-    ) -> Self {
-        Self { input_tx, render }
+    pub fn new(input_tx: mpsc::UnboundedSender<ClientMessage>) -> Self {
+        Self { input_tx }
     }
 
-    /// Poll for keyboard input and convert to movement commands
-    pub fn poll_input(&self) -> bool {
-        let mut should_exit = false;
+    /// Poll for keyboard input and send a single-step Move to the server.
+    /// `player_radius` is used to scale the step distance; if `None`, a default
+    /// base distance is used. Returns true if the application should exit.
+    pub fn poll_input(&self, player_radius: Option<f32>) -> bool {
+        let mut dx = 0.0f32;
+        let mut dy = 0.0f32;
+        let mut has_press = false;
 
-        while event::poll(std::time::Duration::from_millis(0)).unwrap_or(false) {
-            if let Ok(Event::Key(key_event)) = event::read() {
-                if key_event.kind == KeyEventKind::Press {
-                    if self.handle_key(key_event) {
-                        should_exit = true;
-                    }
-                }
-            } else {
-                break;
-            }
+        // Use key *press* (one-click) for discrete movement
+        if is_key_pressed(KeyCode::W) || is_key_pressed(KeyCode::Up) {
+            dy -= 1.0;
+            has_press = true;
+        }
+        if is_key_pressed(KeyCode::S) || is_key_pressed(KeyCode::Down) {
+            dy += 1.0;
+            has_press = true;
+        }
+        if is_key_pressed(KeyCode::A) || is_key_pressed(KeyCode::Left) {
+            dx -= 1.0;
+            has_press = true;
+        }
+        if is_key_pressed(KeyCode::D) || is_key_pressed(KeyCode::Right) {
+            dx += 1.0;
+            has_press = true;
         }
 
-        should_exit
-    }
+        // ESC to quit
+        if is_key_pressed(KeyCode::Escape) {
+            let _ = self.input_tx.send(ClientMessage::Quit);
+            return true;
+        }
 
-    fn handle_key(&self, key_event: KeyEvent) -> bool {
-        let (dx, dy): (f32, f32) = match key_event.code {
-            // WASD
-            KeyCode::Char('w') | KeyCode::Char('W') => (0.0, -1.0),
-            KeyCode::Char('s') | KeyCode::Char('S') => (0.0, 1.0),
-            KeyCode::Char('a') | KeyCode::Char('A') => (-1.0, 0.0),
-            KeyCode::Char('d') | KeyCode::Char('D') => (1.0, 0.0),
+        if has_press {
+            // Normalize diagonal movement
+            let mag = (dx * dx + dy * dy).sqrt();
+            let ndx = if mag > 0.0 { dx / mag } else { 0.0 };
+            let ndy = if mag > 0.0 { dy / mag } else { 0.0 };
 
-            // Arrows
-            KeyCode::Up => (0.0, -1.0),
-            KeyCode::Down => (0.0, 1.0),
-            KeyCode::Left => (-1.0, 0.0),
-            KeyCode::Right => (1.0, 0.0),
+            // Compute step distance based on player size (radius). If unknown,
+            // fall back to a reasonable default.
+            let base_radius = player_radius.unwrap_or(10.0);
+            // Scale factor: one click moves approximately two radii.
+            let distance = base_radius * 2.0;
 
-            // Quit
-            KeyCode::Esc => {
-                let _ = self.input_tx.send(ClientMessage::Quit);
-                return true;
-            }
+            let msg = ClientMessage::Move { dx: ndx, dy: ndy, distance };
+            let _ = self.input_tx.send(msg);
+        }
 
-            _ => return false,
-        };
-
-        let magnitude = (dx * dx + dy * dy).sqrt();
-        let normalized_dx = if magnitude > 0.0 { dx / magnitude } else { 0.0 };
-        let normalized_dy = if magnitude > 0.0 { dy / magnitude } else { 0.0 };
-
-        // Distance = EXACTLY ONE SCREEN CELL
-        let distance = {
-            let mut rm = self.render.lock().unwrap();
-            rm.cell_distance(dx, dy)
-        };
-
-        let msg = ClientMessage::Move {
-            dx: normalized_dx,
-            dy: normalized_dy,
-            distance,
-        };
-
-        let _ = self.input_tx.send(msg);
         false
     }
 }

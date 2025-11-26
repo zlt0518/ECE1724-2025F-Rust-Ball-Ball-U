@@ -31,4 +31,5 @@ pub struct Dot {
     pub y: f32,
     pub radius: f32,
     pub color: (u8, u8, u8),
+    pub score: u32, // Score value of this dot (2, 5, or 10)
 }

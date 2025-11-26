@@ -1,420 +1,377 @@
-use ratatui::{
-    backend::CrosstermBackend,
-    layout::{Alignment, Constraint, Layout, Margin, Rect},
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
-    Frame, Terminal,
-};
-use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-};
-use shared::GameSnapshot;
-use shared::objects::PlayerSpec;
-use std::io::{self, stdout};
+use macroquad::prelude::*;
+use shared::{GameSnapshot, mechanics};
 use std::time::Instant;
 
 pub struct RenderManager {
-    terminal: Terminal<CrosstermBackend<std::io::Stdout>>,
     world_width: f32,
     world_height: f32,
+    camera_x: f32,
+    camera_y: f32,
 }
 
 impl RenderManager {
-    pub fn new(world_width: f32, world_height: f32) -> io::Result<Self> {
-        //println!("[DEBUG] RenderManager::new called with world size: {}x{}", world_width, world_height);
-        enable_raw_mode()?;
-        //println!("[DEBUG] Raw mode enabled");
-        let mut stdout = stdout();
-        execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-        //println!("[DEBUG] Entered alternate screen");
-        let backend = CrosstermBackend::new(stdout);
-        let terminal = Terminal::new(backend)?;
-        //println!("[DEBUG] Terminal initialized successfully");
-
-        Ok(Self {
-            terminal,
+    pub fn new(world_width: f32, world_height: f32) -> Self {
+        Self {
             world_width,
             world_height,
-        })
+            camera_x: world_width / 2.0,
+            camera_y: world_height / 2.0,
+        }
     }
 
-    pub fn render(&mut self, snapshot: &GameSnapshot, received_at: Instant) -> io::Result<()> {
-        let world_width = self.world_width;
-        let world_height = self.world_height;
-        self.terminal.draw(|f| {
-            Self::draw_game_static(f, snapshot, received_at, world_width, world_height);
-        })?;
-        //println!("[DEBUG] RenderManager::render completed successfully");
-        Ok(())
-    }
+    pub fn render(&mut self, snapshot: &GameSnapshot, received_at: Instant, player_id: Option<u64>) {
+        // Clear screen with dark background
+        clear_background(Color::from_rgba(10, 10, 15, 255));
 
-    fn draw_game_static(f: &mut Frame, snapshot: &GameSnapshot, received_at: Instant, world_width: f32, world_height: f32) {
-        let size = f.size();
+        // Get screen dimensions
+        let screen_width = screen_width();
+        let screen_height = screen_height();
 
-        // Create layout: game area in center, info on sides
-        let chunks = Layout::default()
-            .direction(ratatui::layout::Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(10), // Left margin
-                Constraint::Percentage(80), // Game area
-                Constraint::Percentage(10), // Right margin
-            ])
-            .split(size);
+        // Update camera to follow the local player (by player_id)
+        // If player_id is set, find the player with that ID, otherwise follow first player
+        let player_to_follow = if let Some(id) = player_id {
+            snapshot.players.iter().find(|p| p.id == id)
+        } else {
+            snapshot.players.first()
+        };
+        
+        if let Some(player) = player_to_follow {
+            // Use prediction for smooth camera movement
+            let pred_seconds = received_at.elapsed().as_secs_f32();
+            self.camera_x = player.x + player.vx * pred_seconds;
+            self.camera_y = player.y + player.vy * pred_seconds;
+        }
 
-        let game_area = chunks[1];
+        // Calculate viewport bounds (world coordinates visible on screen)
+        let viewport_width = 1000.0; // Adjust for zoom level
+        let viewport_height = 750.0;
+        let min_x = self.camera_x - viewport_width / 2.0;
+        let max_x = self.camera_x + viewport_width / 2.0;
+        let min_y = self.camera_y - viewport_height / 2.0;
+        let max_y = self.camera_y + viewport_height / 2.0;
 
-        // Split game area into game canvas and info panel
-        let vertical_chunks = Layout::default()
-            .direction(ratatui::layout::Direction::Vertical)
-            .constraints([
-                Constraint::Percentage(85), // Game canvas
-                Constraint::Percentage(15), // Info panel
-            ])
-            .split(game_area);
+        // Draw grid for reference
+        self.draw_grid(min_x, max_x, min_y, max_y, screen_width, screen_height);
 
-        let canvas = vertical_chunks[0];
-        let info_panel = vertical_chunks[1];
-
-        // Draw game canvas with borders
-        let canvas_block = Block::default()
-            .borders(Borders::ALL)
-            .title("Game World")
-            .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD));
-        f.render_widget(canvas_block, canvas);
-
-        // Draw players and dots inside the canvas
-        let inner_canvas = canvas.inner(Margin::new(1, 1));
-        Self::draw_objects_static(f, snapshot, inner_canvas, received_at, world_width, world_height);
-
-        // Draw info panel
-        Self::draw_info_panel_static(f, snapshot, info_panel);
-    }
-
-    fn draw_objects_static(f: &mut Frame, snapshot: &GameSnapshot, area: Rect, received_at: Instant, world_width: f32, world_height: f32) {
-        let canvas_width = area.width as f32;
-        let canvas_height = area.height as f32;
-        let buffer = f.buffer_mut();
+        // Draw world boundaries
+        self.draw_world_bounds(min_x, max_x, min_y, max_y, screen_width, screen_height);
 
         // Draw dots
         for dot in &snapshot.dots {
-            let (x, y) = Self::world_to_screen_static(
-                dot.x,
-                dot.y,
-                world_width,
-                world_height,
-                canvas_width,
-                canvas_height,
-            );
+            // Check if dot is in viewport
+            if dot.x >= min_x - dot.radius
+                && dot.x <= max_x + dot.radius
+                && dot.y >= min_y - dot.radius
+                && dot.y <= max_y + dot.radius
+            {
+                let (screen_x, screen_y) = self.world_to_screen(
+                    dot.x,
+                    dot.y,
+                    min_x,
+                    max_x,
+                    min_y,
+                    max_y,
+                    screen_width,
+                    screen_height,
+                );
+                let screen_radius = self.world_to_screen_size(dot.radius, viewport_width, screen_width);
 
-            if x >= 0 && x < canvas_width as i32 && y >= 0 && y < canvas_height as i32 {
-                let radius = (dot.radius * canvas_width / world_width).max(1.0) as u16;
-                let radius = radius.min((canvas_width.min(canvas_height) / 2.0) as u16);
-
-                // Draw dot as a simple character
-                if radius <= 1 {
-                    let cell = buffer.get_mut(x as u16 + area.x, y as u16 + area.y);
-                    cell.set_char('·');
-                    cell.set_fg(Color::Rgb(dot.color.0, dot.color.1, dot.color.2));
-                } else {
-                    // Draw larger dots with a circle approximation
-                    for dy in -(radius as i32)..=(radius as i32) {
-                        for dx in -(radius as i32)..=(radius as i32) {
-                            if dx * dx + dy * dy <= (radius as i32) * (radius as i32) {
-                                let px = x + dx;
-                                let py = y + dy;
-                                if px >= 0
-                                    && px < canvas_width as i32
-                                    && py >= 0
-                                    && py < canvas_height as i32
-                                {
-                                    let cell = buffer.get_mut(px as u16 + area.x, py as u16 + area.y);
-                                    cell.set_char('●');
-                                    cell.set_fg(Color::Rgb(dot.color.0, dot.color.1, dot.color.2));
-                                }
-                            }
-                        }
-                    }
-                }
+                draw_circle(
+                    screen_x,
+                    screen_y,
+                    screen_radius.max(2.0),
+                    Color::from_rgba(dot.color.0, dot.color.1, dot.color.2, 255),
+                );
             }
         }
 
         // Draw players
-        // Use one-tick prediction (based on server tick interval) to smooth movement
-        let prediction_ms = snapshot.constants.tick_interval_ms as f32;
         for player in &snapshot.players {
-            Self::draw_player_static(
-                buffer,
-                player,
-                area,
-                world_width,
-                world_height,
-                canvas_width,
-                canvas_height,
-                prediction_ms,
-                received_at,
-            );
+            // Apply client-side prediction for smooth movement
+            let pred_seconds = received_at.elapsed().as_secs_f32();
+            let predicted_x = player.x + player.vx * pred_seconds;
+            let predicted_y = player.y + player.vy * pred_seconds;
+
+            // Check if player is in viewport
+            if predicted_x >= min_x - player.radius
+                && predicted_x <= max_x + player.radius
+                && predicted_y >= min_y - player.radius
+                && predicted_y <= max_y + player.radius
+            {
+                let (screen_x, screen_y) = self.world_to_screen(
+                    predicted_x,
+                    predicted_y,
+                    min_x,
+                    max_x,
+                    min_y,
+                    max_y,
+                    screen_width,
+                    screen_height,
+                );
+                let screen_radius = self.world_to_screen_size(player.radius, viewport_width, screen_width);
+
+                let player_color = Self::get_player_color(player.id);
+
+                // Draw player circle (filled)
+                draw_circle(screen_x, screen_y, screen_radius.max(5.0), player_color);
+
+                // Draw player outline
+                draw_circle_lines(
+                    screen_x,
+                    screen_y,
+                    screen_radius.max(5.0),
+                    2.0,
+                    Color::from_rgba(255, 255, 255, 120),
+                );
+
+                // Draw player name above the circle
+                let name_y = screen_y - screen_radius - 15.0;
+                let text_size = 20.0;
+                let text_dims = measure_text(&player.name, None, text_size as u16, 1.0);
+                let name_x = screen_x - text_dims.width / 2.0;
+
+                // Draw name background
+                draw_rectangle(
+                    name_x - 4.0,
+                    name_y - text_dims.height + 2.0,
+                    text_dims.width + 8.0,
+                    text_dims.height + 4.0,
+                    Color::from_rgba(0, 0, 0, 180),
+                );
+
+                // Draw name text
+                draw_text(&player.name, name_x, name_y, text_size, WHITE);
+
+                // Draw score below name
+                let score_text = format!("Score: {}", player.score);
+                let score_dims = measure_text(&score_text, None, 16, 1.0);
+                let score_x = screen_x - score_dims.width / 2.0;
+                let score_y = name_y + 18.0;
+                draw_text(&score_text, score_x, score_y, 16.0, Color::from_rgba(200, 200, 200, 255));
+            }
         }
+
+        // Draw UI overlay
+        self.draw_ui_overlay(snapshot);
     }
 
-    fn draw_info_panel_static(f: &mut Frame, snapshot: &GameSnapshot, area: Rect) {
-        let mut info_lines = vec![
-            Line::from(vec![
-                Span::styled("Tick: ", Style::default().fg(Color::Yellow)),
-                Span::styled(
-                    snapshot.tick.to_string(),
-                    Style::default().fg(Color::White),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("Players: ", Style::default().fg(Color::Yellow)),
-                Span::styled(
-                    snapshot.players.len().to_string(),
-                    Style::default().fg(Color::White),
-                ),
-            ]),
-            Line::from(vec![
-                Span::styled("Dots: ", Style::default().fg(Color::Yellow)),
-                Span::styled(
-                    snapshot.dots.len().to_string(),
-                    Style::default().fg(Color::White),
-                ),
-            ]),
-        ];
-
-        // Add player scores
-        for player in &snapshot.players {
-            info_lines.push(Line::from(vec![
-                Span::styled(
-                    format!("{}: ", player.name),
-                    Style::default().fg(Self::get_player_color_static(player.id)),
-                ),
-                Span::styled(
-                    format!("Score {} | Size {:.1}", player.score, player.radius),
-                    Style::default().fg(Color::White),
-                ),
-            ]));
-        }
-
-        let info_block = Block::default()
-            .borders(Borders::ALL)
-            .title("Game Info")
-            .title_style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD));
-
-        let info_paragraph = Paragraph::new(info_lines)
-            .block(info_block)
-            .alignment(Alignment::Left);
-
-        f.render_widget(info_paragraph, area);
-    }
-
-    fn world_to_screen_static(
+    fn world_to_screen(
+        &self,
         world_x: f32,
         world_y: f32,
-        world_w: f32,
-        world_h: f32,
+        min_x: f32,
+        max_x: f32,
+        min_y: f32,
+        max_y: f32,
         screen_w: f32,
         screen_h: f32,
-    ) -> (i32, i32) {
-        let x = (world_x / world_w * screen_w).floor() as i32;
-        let y = (world_y / world_h * screen_h).floor() as i32;
+    ) -> (f32, f32) {
+        let viewport_w = max_x - min_x;
+        let viewport_h = max_y - min_y;
+        let x = (world_x - min_x) / viewport_w * screen_w;
+        let y = (world_y - min_y) / viewport_h * screen_h;
         (x, y)
     }
 
-    /// Draw a single player on the screen
-    fn draw_player_static(
-        buffer: &mut ratatui::buffer::Buffer,
-        player: &shared::objects::PlayerSpec,
-        area: Rect,
-        world_width: f32,
-        world_height: f32,
-        canvas_width: f32,
-        canvas_height: f32,
-        prediction_ms: f32,
-        received_at: Instant,
+    fn world_to_screen_size(&self, world_size: f32, viewport_width: f32, screen_width: f32) -> f32 {
+        world_size / viewport_width * screen_width
+    }
+
+    fn draw_grid(
+        &self,
+        min_x: f32,
+        max_x: f32,
+        min_y: f32,
+        max_y: f32,
+        screen_width: f32,
+        screen_height: f32,
     ) {
-        // Apply a small prediction based on velocity to smooth between snapshots
-        // Amount of time to predict forward
-        let pred_seconds = received_at.elapsed().as_secs_f32();
+        let grid_size = 100.0; // World units
+        let viewport_width = max_x - min_x;
+        let viewport_height = max_y - min_y;
 
-        // Always predict from the authoritative server snapshot
-        let world_x = player.x + player.vx * pred_seconds;
-        let world_y = player.y + player.vy * pred_seconds;
-
-        // Convert predicted world coords into screen coords
-        let (x, y) = Self::world_to_screen_static(
-            world_x,
-            world_y,
-            world_width,
-            world_height,
-            canvas_width,
-            canvas_height,
-        );
-
-        if x < 0 || x >= canvas_width as i32 || y < 0 || y >= canvas_height as i32 {
-            return;
+        // Vertical lines
+        let start_x = (min_x / grid_size).floor() * grid_size;
+        let mut x = start_x;
+        while x <= max_x {
+            if x >= 0.0 && x <= self.world_width {
+                let screen_x = (x - min_x) / viewport_width * screen_width;
+                draw_line(
+                    screen_x,
+                    0.0,
+                    screen_x,
+                    screen_height,
+                    1.0,
+                    Color::from_rgba(30, 30, 40, 255),
+                );
+            }
+            x += grid_size;
         }
 
-        // Calculate screen radius from world radius (keep as f32 for precision)
-        let screen_radius = player.radius * canvas_width / world_width;
-        
-        // Clamp screen radius to reasonable bounds
-        let screen_radius = screen_radius.max(0.5).min(canvas_width.min(canvas_height) / 2.0);
-
-        let player_color = Self::get_player_color_static(player.id);
-        
-        // terminal cell is ~2x taller than wide
-        let char_aspect_ratio: f32 = 2.0;
-
-        // Use separate radii for x and y to produce an ellipse that looks like a circle
-        let radius_x = screen_radius;
-        let radius_y = screen_radius * char_aspect_ratio;
-
-        // Use f32 for precise circle/ellipse calculation
-        let radius_x_i32 = radius_x.ceil() as i32;
-        let radius_y_i32 = radius_y.ceil() as i32;
-
-        // For very small radius, just draw center point
-        if screen_radius <= 0.5 {
-            let cell = buffer.get_mut(x as u16 + area.x, y as u16 + area.y);
-            cell.set_char(' ');
-            cell.set_bg(player_color);
-        } else {
-            // Draw filled circle using multi-cell approach: dx*dx + dy*dy <= r*r
-            // For each terminal cell, check if it's within the circle radius
-            let radius_sq = screen_radius * screen_radius;
-
-            for dy in -radius_x_i32..=radius_x_i32 {
-                for dx in -radius_x_i32..=radius_x_i32 {
-                    // Calculate distance from center for this cell
-                    let dx_f = dx as f32;
-                    let dy_f = dy as f32 * char_aspect_ratio;
-                    // Check if this cell is within the circle
-                    if dx_f * dx_f + dy_f * dy_f <= radius_sq {
-                        let px = x + dx;
-                        let py = y + dy;
-                        if px >= 0
-                            && px < canvas_width as i32
-                            && py >= 0
-                            && py < canvas_height as i32
-                        {
-                            let cell = buffer.get_mut(px as u16 + area.x, py as u16 + area.y);
-                            // Use block character instead of background color
-                            cell.set_char(' ');
-                            cell.set_bg(player_color);
-                        }
-                    }
-                }
+        // Horizontal lines
+        let start_y = (min_y / grid_size).floor() * grid_size;
+        let mut y = start_y;
+        while y <= max_y {
+            if y >= 0.0 && y <= self.world_height {
+                let screen_y = (y - min_y) / viewport_height * screen_height;
+                draw_line(
+                    0.0,
+                    screen_y,
+                    screen_width,
+                    screen_y,
+                    1.0,
+                    Color::from_rgba(30, 30, 40, 255),
+                );
             }
-        }
-
-        // Draw player name above the circle
-        if y > 0 && !player.name.is_empty() {
-            let name_offset = if screen_radius <= 0.5 { 
-                1 
-            } else { 
-                screen_radius.ceil() as i32 + 1 
-            };
-            let name_y = (y - name_offset).max(0) as u16;
-            if name_y < canvas_height as u16 {
-                let name_text = if player.name.len() > 10 {
-                    &player.name[..10]
-                } else {
-                    &player.name
-                };
-                let name_x = (x - name_text.len() as i32 / 2).max(0) as u16;
-                if name_x + name_text.len() as u16 <= canvas_width as u16 {
-                    // Draw name directly to buffer
-                    for (i, ch) in name_text.chars().enumerate() {
-                        if (name_x as usize + i) < canvas_width as usize {
-                            let cell = buffer.get_mut(name_x + area.x + i as u16, name_y + area.y);
-                            cell.set_char(ch);
-                            cell.set_fg(player_color);
-                        }
-                    }
-                }
-            }
+            y += grid_size;
         }
     }
 
-    fn get_player_color_static(player_id: u64) -> Color {
-        // Generate a color based on player ID
+    fn draw_world_bounds(
+        &self,
+        min_x: f32,
+        max_x: f32,
+        min_y: f32,
+        max_y: f32,
+        screen_width: f32,
+        screen_height: f32,
+    ) {
+        let viewport_width = max_x - min_x;
+        let viewport_height = max_y - min_y;
+
+        // Draw world boundaries if visible
+        let bounds_color = Color::from_rgba(255, 100, 100, 150);
+        let bounds_thickness = 3.0;
+
+        // Left boundary (x = 0)
+        if 0.0 >= min_x && 0.0 <= max_x {
+            let screen_x = (0.0 - min_x) / viewport_width * screen_width;
+            draw_line(screen_x, 0.0, screen_x, screen_height, bounds_thickness, bounds_color);
+        }
+
+        // Right boundary (x = world_width)
+        if self.world_width >= min_x && self.world_width <= max_x {
+            let screen_x = (self.world_width - min_x) / viewport_width * screen_width;
+            draw_line(screen_x, 0.0, screen_x, screen_height, bounds_thickness, bounds_color);
+        }
+
+        // Top boundary (y = 0)
+        if 0.0 >= min_y && 0.0 <= max_y {
+            let screen_y = (0.0 - min_y) / viewport_height * screen_height;
+            draw_line(0.0, screen_y, screen_width, screen_y, bounds_thickness, bounds_color);
+        }
+
+        // Bottom boundary (y = world_height)
+        if self.world_height >= min_y && self.world_height <= max_y {
+            let screen_y = (self.world_height - min_y) / viewport_height * screen_height;
+            draw_line(0.0, screen_y, screen_width, screen_y, bounds_thickness, bounds_color);
+        }
+    }
+
+    fn draw_ui_overlay(&self, snapshot: &GameSnapshot) {
+        let padding = 10.0;
+        let line_height = 25.0;
+        let mut y = padding;
+
+        // Calculate panel height
+        let panel_height = 120.0 + snapshot.players.len() as f32 * line_height;
+
+        // Draw semi-transparent background
+        draw_rectangle(0.0, 0.0, 320.0, panel_height, Color::from_rgba(0, 0, 0, 180));
+
+        // Draw game info
+        draw_text(
+            &format!("Tick: {}", snapshot.tick),
+            padding,
+            y + 20.0,
+            20.0,
+            YELLOW,
+        );
+        y += line_height;
+
+        draw_text(
+            &format!("Players: {}", snapshot.players.len()),
+            padding,
+            y + 20.0,
+            20.0,
+            YELLOW,
+        );
+        y += line_height;
+
+        draw_text(
+            &format!("Dots: {}", snapshot.dots.len()),
+            padding,
+            y + 20.0,
+            20.0,
+            YELLOW,
+        );
+        y += line_height;
+
+        // Draw separator
+        draw_line(
+            padding,
+            y + 10.0,
+            300.0,
+            y + 10.0,
+            1.0,
+            Color::from_rgba(100, 100, 100, 255),
+        );
+        y += 20.0;
+
+        // Draw player scores (sorted by score)
+        let mut players = snapshot.players.clone();
+        players.sort_by(|a, b| b.score.cmp(&a.score));
+
+        for player in &players {
+            let color = Self::get_player_color(player.id);
+            
+            // Calculate expected speed based on mechanics
+            let expected_speed = mechanics::calculate_speed_from_score(
+                player.score,
+                snapshot.constants.move_speed_base,
+            );
+            
+            draw_text(
+                &format!(
+                    "{}: S:{} R:{:.1} Spd:{:.0}",
+                    player.name, player.score, player.radius, expected_speed
+                ),
+                padding,
+                y + 20.0,
+                18.0,
+                color,
+            );
+            y += line_height;
+        }
+
+        // Draw controls hint at bottom
+        let controls_y = screen_height() - 100.0;
+        draw_rectangle(
+            0.0,
+            controls_y,
+            320.0,
+            100.0,
+            Color::from_rgba(0, 0, 0, 180),
+        );
+        
+        y = controls_y + 10.0;
+        draw_text("Controls:", padding, y + 20.0, 18.0, Color::from_rgba(150, 150, 150, 255));
+        y += 25.0;
+        draw_text("WASD / Arrow Keys - Move", padding, y + 20.0, 16.0, WHITE);
+        y += 20.0;
+        draw_text("ESC - Quit", padding, y + 20.0, 16.0, WHITE);
+    }
+
+    fn get_player_color(player_id: u64) -> Color {
         let colors = [
-            Color::Red,
-            Color::Blue,
-            Color::Green,
-            Color::Yellow,
-            Color::Magenta,
-            Color::Cyan,
-            Color::White,
+            Color::from_rgba(255, 100, 100, 255), // Red
+            Color::from_rgba(100, 150, 255, 255), // Blue
+            Color::from_rgba(100, 255, 100, 255), // Green
+            Color::from_rgba(255, 255, 100, 255), // Yellow
+            Color::from_rgba(255, 100, 255, 255), // Magenta
+            Color::from_rgba(100, 255, 255, 255), // Cyan
+            Color::from_rgba(255, 200, 100, 255), // Orange
         ];
         colors[(player_id as usize) % colors.len()]
-    }
-
-    pub fn cell_distance(&mut self, dx: f32, dy: f32) -> f32 {
-        // Get the current terminal frame size
-        let size = self
-            .terminal
-            .size()
-            .expect("Failed to read terminal size");
-
-        // Recompute the same canvas layout used in draw()
-        let chunks = Layout::default()
-            .direction(ratatui::layout::Direction::Horizontal)
-            .constraints([
-                Constraint::Percentage(10),
-                Constraint::Percentage(80),
-                Constraint::Percentage(10),
-            ])
-            .split(size);
-
-        let game_area = chunks[1];
-
-        let vertical_chunks = Layout::default()
-            .direction(ratatui::layout::Direction::Vertical)
-            .constraints([
-                Constraint::Percentage(85),
-                Constraint::Percentage(15),
-            ])
-            .split(game_area);
-
-        let canvas = vertical_chunks[0];
-        let canvas_w = canvas.width as f32;
-        let canvas_h = canvas.height as f32;
-
-        // 1 terminal cell worth of world-units
-        if dx.abs() > 0.0 {
-            self.world_width / canvas_w // horizontal keypress
-        } else {
-            self.world_height / canvas_h // vertical keypress
-        }
-    }
-}
-
-impl Drop for RenderManager {
-    fn drop(&mut self) {
-        let _ = disable_raw_mode();
-        let _ = execute!(
-            self.terminal.backend_mut(),
-            LeaveAlternateScreen,
-            DisableMouseCapture
-        );
-    }
-}
-
-fn world_units_per_screen_cell(
-    world_w: f32,
-    world_h: f32,
-    canvas_w: f32,
-    canvas_h: f32,
-    dx: f32,
-    dy: f32,
-) -> f32 {
-    if dx.abs() > 0.0 {
-        world_w / canvas_w    // horizontal: 1 cell worth of world-units
-    } else {
-        world_h / canvas_h    // vertical: 1 cell worth of world-units
     }
 }

@@ -2,6 +2,8 @@ mod render_manager;
 mod input_manager;
 mod websocket;
 
+use tokio::runtime::Runtime;
+use macroquad::prelude::*;
 use tokio_tungstenite::{connect_async, tungstenite::Message};
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::mpsc;
@@ -10,36 +12,132 @@ use serde_json;
 use crate::websocket::ClientSnapshot;
 use std::time::Instant;
 
-#[tokio::main]
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Ball Ball U - Agar.io Clone".to_owned(),
+        window_width: 1280,
+        window_height: 720,
+        window_resizable: true,
+        ..Default::default()
+    }
+}
+
+/// Handle incoming text messages from the server
+/// Returns true if the connection should be closed
+fn handle_text_message(
+    text: &str,
+    snapshot_tx: &mpsc::UnboundedSender<ClientSnapshot>,
+    player_id_tx: &mpsc::UnboundedSender<u64>,
+) -> bool {
+    // Try to parse as ServerMessage
+    if let Ok(server_msg) = serde_json::from_str::<ServerMessage>(text) {
+        return handle_server_message(server_msg, snapshot_tx, player_id_tx);
+    }
+    
+    // Try direct GameSnapshot parse as fallback
+    if let Ok(snapshot) = serde_json::from_str::<GameSnapshot>(text) {
+        let _ = snapshot_tx.send(ClientSnapshot {
+            snapshot,
+            received_at: Instant::now(),
+        });
+    }
+    
+    false
+}
+
+/// Handle parsed server messages
+/// Returns true if the connection should be closed
+fn handle_server_message(
+    msg: ServerMessage,
+    snapshot_tx: &mpsc::UnboundedSender<ClientSnapshot>,
+    player_id_tx: &mpsc::UnboundedSender<u64>,
+) -> bool {
+    match msg {
+        ServerMessage::Welcome(welcome) => {
+            println!("Welcomed! Player ID: {}", welcome.player_id);
+            let _ = player_id_tx.send(welcome.player_id);
+            false
+        }
+        ServerMessage::StateUpdate(state_update) => {
+            let snapshot = state_update.snapshot;
+            snapshot_tx
+                .send(ClientSnapshot {
+                    snapshot,
+                    received_at: Instant::now(),
+                })
+                .is_err()
+        }
+        ServerMessage::Bye(bye) => {
+            println!("Server says goodbye: {}", bye.reason);
+            true
+        }
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
+    // +++Create tokio runtime manually (macroquad does NOT supply a reactor)
+    let rt = Runtime::new().expect("Failed to create Tokio runtime");
+
     let url = "ws://127.0.0.1:8000";
-    let (shutdown_tx, mut shutdown_rx) = mpsc::unbounded_channel::<()>();
     
     // Initialize render manager with default world size
-    // You may want to get these from the server's initial message
+    // These should match server's world size
     let world_width = 2000.0;
     let world_height = 2000.0;
-    
-    let mut render_manager = match render_manager::RenderManager::new(world_width, world_height) {
-        Ok(rm) => rm,
-        Err(e) => {
-            eprintln!("Failed to initialize render manager: {:?}", e);
-            return;
-        }
-    };
-    // Wrap render manager so both input + main loop can share it
-    use std::sync::{Arc, Mutex};
-    let render_manager_arc = Arc::new(Mutex::new(render_manager));
+    let mut render_manager = render_manager::RenderManager::new(world_width, world_height);
 
     println!("Connecting to {}", url);
 
-    let (ws_stream, _) = match connect_async(url).await {
+    // Show connecting screen
+    clear_background(BLACK);
+    draw_text(
+        "Connecting to server...",
+        screen_width() / 2.0 - 150.0,
+        screen_height() / 2.0,
+        30.0,
+        WHITE,
+    );
+    next_frame().await;
+
+    // Connect to WebSocket server
+    // let (ws_stream, _) = match connect_async(url).await {
+    let (ws_stream, _) = match rt.block_on(async { connect_async(url).await }) {
         Ok(c) => {
-            //println!("[DEBUG] Successfully connected to server");
+            println!("Successfully connected to server");
             c
         },
         Err(e) => {
             eprintln!("Failed to connect: {:?}", e);
+            // Show error on screen
+            loop {
+                clear_background(BLACK);
+                draw_text(
+                    "Failed to connect to server!",
+                    screen_width() / 2.0 - 200.0,
+                    screen_height() / 2.0 - 20.0,
+                    30.0,
+                    RED,
+                );
+                draw_text(
+                    &format!("Error: {:?}", e),
+                    screen_width() / 2.0 - 200.0,
+                    screen_height() / 2.0 + 20.0,
+                    20.0,
+                    Color::from_rgba(255, 150, 150, 255),
+                );
+                draw_text(
+                    "Press ESC to exit",
+                    screen_width() / 2.0 - 100.0,
+                    screen_height() / 2.0 + 60.0,
+                    20.0,
+                    WHITE,
+                );
+                if is_key_pressed(KeyCode::Escape) {
+                    break;
+                }
+                next_frame().await;
+            }
             return;
         }
     };
@@ -52,57 +150,35 @@ async fn main() {
     // Channel to send input commands to server
     let (input_tx, mut input_rx) = mpsc::unbounded_channel::<ClientMessage>();
     
+    // Channel to signal shutdown
+    let (shutdown_tx, mut shutdown_rx) = mpsc::unbounded_channel::<()>();
+    
+    // Channel to send player_id from websocket task to main loop
+    let (player_id_tx, mut player_id_rx) = mpsc::unbounded_channel::<u64>();
+    
     // Initialize input manager
-    let input_manager = input_manager::InputManager::new(
-        input_tx.clone(),
-        render_manager_arc.clone(),
-    );
+    let input_manager = input_manager::InputManager::new(input_tx.clone());
 
     // Spawn a task to receive messages from the server
-    let read_handle = tokio::spawn(async move {
+    let read_handle = rt.spawn(async move {
         while let Some(msg) = read.next().await {
-            match msg {
+            let should_break = match msg {
                 Ok(Message::Text(text)) => {
-                    // Try to parse as ServerMessage first
-                    match serde_json::from_str::<ServerMessage>(&text) {
-                        Ok(server_msg) => {
-                            // Extract GameSnapshot from StateUpdate
-                            if let ServerMessage::StateUpdate(state_update) = server_msg {
-
-                                let snapshot = state_update.snapshot;
-                                if snapshot_tx
-                                    .send(ClientSnapshot { snapshot, received_at: Instant::now() })
-                                    .is_err()
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                        Err(_e) => {
-                            // Try direct GameSnapshot parse as fallback (for debugging)
-                            match serde_json::from_str::<GameSnapshot>(&text) {
-                                Ok(snapshot) => {
-                                    let _ = snapshot_tx
-                                                .send(ClientSnapshot { snapshot, received_at: Instant::now() })
-                                                .ok();
-                                }
-                                Err(_e2) => {
-                                    //println!("[DEBUG] Fallback: Direct GameSnapshot parse also failed: {:?}", e2);
-                                }
-                            }
-                        }
-                    }
+                    handle_text_message(&text, &snapshot_tx, &player_id_tx)
                 }
                 Ok(Message::Close(_)) => {
-                    break;
+                    println!("Server closed connection");
+                    true
                 }
                 Err(e) => {
                     eprintln!("WebSocket error: {:?}", e);
-                    break;
+                    true
                 }
-                _ => {
-                    // Ignore other message types
-                }
+                _ => false, // Ignore other message types
+            };
+            
+            if should_break {
+                break;
             }
         }
         // Notify main loop that server disconnected
@@ -110,7 +186,7 @@ async fn main() {
     });
 
     // Spawn a task to send input commands to server
-    let write_handle = tokio::spawn(async move {
+    let write_handle = rt.spawn(async move {
         while let Some(msg) = input_rx.recv().await {
             let json = serde_json::to_string(&msg).unwrap();
             if write.send(Message::Text(json)).await.is_err() {
@@ -119,42 +195,119 @@ async fn main() {
         }
     });
     
-    // Main loop: render game state and handle input
+    // Main game loop
     let mut should_exit = false;
     let mut latest_snapshot: Option<ClientSnapshot> = None;
+    let mut connection_lost = false;
+    let mut frames_without_update = 0;
+    let mut player_id: Option<u64> = None;
+
     loop {
-        // Poll for keyboard input (non-blocking)
-        if input_manager.poll_input() {
+        // Check for shutdown signal (non-blocking)
+        if let Ok(_) = shutdown_rx.try_recv() {
+            connection_lost = true;
             should_exit = true;
         }
-        
-        tokio::select! {
-            // Receive game snapshot and render
-            snapshot = snapshot_rx.recv() => {
-                if let Some(snap) = snapshot {
-                    latest_snapshot = Some(snap);
-                }
-            }
-            // Detect server disconnection
-            _ = shutdown_rx.recv() => {
-                println!("Server disconnected — closing client.");
-                break;
-            }
-            // Check if tasks finished or we should exit
-            _ = tokio::time::sleep(tokio::time::Duration::from_millis(16)) => {
-                if should_exit || read_handle.is_finished() || write_handle.is_finished() {
-                    break;
-                }
-                // Every 16 ms, render the most recent snapshot using prediction
-                if let Some(ref snap) = latest_snapshot {
-                    let mut rm = render_manager_arc.lock().unwrap();
-                    rm.render(&snap.snapshot, snap.received_at);
-                }
-            }
+
+        // Poll for keyboard input (one-click movement). We pass the local
+        // player's radius so the client can compute step distance.
+        let player_radius = latest_snapshot
+            .as_ref()
+            .and_then(|s| s.snapshot.players.first().map(|p| p.radius));
+        if input_manager.poll_input(player_radius) {
+            should_exit = true;
         }
+
+        // Try to receive player_id (non-blocking)
+        while let Ok(id) = player_id_rx.try_recv() {
+            player_id = Some(id);
+            println!("Received player_id: {}", id);
+        }
+
+        // Try to receive new snapshots (non-blocking, drain all pending)
+        let mut received_new_snapshot = false;
+        while let Ok(snap) = snapshot_rx.try_recv() {
+            latest_snapshot = Some(snap);
+            received_new_snapshot = true;
+            frames_without_update = 0;
+        }
+
+        if !received_new_snapshot {
+            frames_without_update += 1;
+        }
+
+        // Render the game
+        if let Some(ref snap) = latest_snapshot {
+            render_manager.render(&snap.snapshot, snap.received_at, player_id);
+            
+            // Show warning if no updates for a while
+            if frames_without_update > 120 {
+                draw_text(
+                    "No updates from server...",
+                    screen_width() / 2.0 - 120.0,
+                    30.0,
+                    20.0,
+                    Color::from_rgba(255, 200, 0, 255),
+                );
+            }
+        } else {
+            // Show connecting message
+            clear_background(BLACK);
+            draw_text(
+                "Waiting for game state...",
+                screen_width() / 2.0 - 150.0,
+                screen_height() / 2.0,
+                30.0,
+                WHITE,
+            );
+        }
+
+        // Show connection lost message overlay
+        if connection_lost {
+            let box_width = 400.0;
+            let box_height = 100.0;
+            let box_x = screen_width() / 2.0 - box_width / 2.0;
+            let box_y = screen_height() / 2.0 - box_height / 2.0;
+            
+            draw_rectangle(
+                box_x,
+                box_y,
+                box_width,
+                box_height,
+                Color::from_rgba(0, 0, 0, 220),
+            );
+            
+            draw_text(
+                "Connection Lost",
+                screen_width() / 2.0 - 100.0,
+                screen_height() / 2.0 - 10.0,
+                30.0,
+                RED,
+            );
+            draw_text(
+                "Press ESC to exit",
+                screen_width() / 2.0 - 80.0,
+                screen_height() / 2.0 + 25.0,
+                20.0,
+                WHITE,
+            );
+        }
+
+        // Check if tasks finished
+        if read_handle.is_finished() || write_handle.is_finished() {
+            should_exit = true;
+        }
+
+        if should_exit {
+            break;
+        }
+
+        next_frame().await;
     }
 
     // Cleanup
-    let _ = write_handle.abort();
-    let _ = read_handle.abort();
+    read_handle.abort();
+    write_handle.abort();
+    
+    println!("Client shutting down...");
 }

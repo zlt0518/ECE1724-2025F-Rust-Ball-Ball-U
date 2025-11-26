@@ -84,17 +84,23 @@ fn handle_player_dot_collision(gs: &mut GameState) {
 
     // Apply effects: remove dots and increase player score/radius
     for (pid, did) in eaten {
+        // Get dot score before removing
+        let dot_score = gs.dots.get(&did).map(|d| d.score).unwrap_or(1);
+        
         if gs.dots.remove(&did).is_some() {
             if let Some(player) = gs.players.get_mut(&pid) {
-                // Increase score
-                player.score += 1;
+                // Increase score by dot's score value
+                player.score += dot_score;
                 // Recalculate radius based on score
                 player.radius = shared::mechanics::calculate_radius_from_score(
                     player.score,
                     10.0 // base radius
                 );
-                println!("Player {} ate Dot {}", pid, did);
+                println!("Player {} ate Dot {} (score: {})", pid, did, dot_score);
             }
+            
+            // Spawn a new dot to maintain total count
+            gs.spawn_new_dot();
         }
     }
 }
@@ -133,8 +139,8 @@ fn handle_player_player_collision(gs: &mut GameState) {
         if let Some(eaten) = gs.players.get(&eaten_id) {
             let eaten_score = eaten.score;
             
-            // Remove eaten player (this also removes input)
-            gs.remove_player(eaten_id);
+            // Respawn eaten player instead of removing (player stays connected)
+            gs.respawn_player(eaten_id);
             
             // Update eater
             if let Some(eater) = gs.players.get_mut(&eater_id) {
