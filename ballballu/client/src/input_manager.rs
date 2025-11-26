@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use macroquad::prelude::*;
+use macroquad::prelude::{is_key_pressed, KeyCode};
 use shared::protocol::ClientMessage;
 use tokio::sync::mpsc;
 

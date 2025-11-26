@@ -287,12 +287,9 @@ impl GameState {
                 println!("GameState: Player {} set name to {}", id, name);
             }
             ClientMessage::Input { input } => {
-                // Phase 4: Store player input (legacy, kept for compatibility)
-                if let Some(player_input) = self.player_inputs.get_mut(&id) {
-                    player_input.dx = input.dx;
-                    player_input.dy = input.dy;
-                    println!("GameState: Player {} input: dx={}, dy={}", id, input.dx, input.dy);
-                }
+                // Input message not used in current implementation
+                println!("GameState: Player {} sent deprecated Input message: dx={}, dy={}", 
+                    id, input.dx, input.dy);
             }
             ClientMessage::Move { dx, dy, distance } => {
                 // Store the move command to be processed next tick
@@ -306,13 +303,6 @@ impl GameState {
                 println!("GameState: Player {} sent Quit (should be handled by websocket_manager)", id);
             }
         }
-    }
-
-    /// Phase 4: Get player input for movement
-    pub fn get_player_input(&self, id: u64) -> (f32, f32) {
-        self.player_inputs.get(&id)
-            .map(|input| (input.dx, input.dy))
-            .unwrap_or((0.0, 0.0))
     }
 
     /// Apply pending moves to players

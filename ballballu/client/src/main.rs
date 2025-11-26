@@ -22,6 +22,58 @@ fn window_conf() -> Conf {
     }
 }
 
+/// Handle incoming text messages from the server
+/// Returns true if the connection should be closed
+fn handle_text_message(
+    text: &str,
+    snapshot_tx: &mpsc::UnboundedSender<ClientSnapshot>,
+    player_id_tx: &mpsc::UnboundedSender<u64>,
+) -> bool {
+    // Try to parse as ServerMessage
+    if let Ok(server_msg) = serde_json::from_str::<ServerMessage>(text) {
+        return handle_server_message(server_msg, snapshot_tx, player_id_tx);
+    }
+    
+    // Try direct GameSnapshot parse as fallback
+    if let Ok(snapshot) = serde_json::from_str::<GameSnapshot>(text) {
+        let _ = snapshot_tx.send(ClientSnapshot {
+            snapshot,
+            received_at: Instant::now(),
+        });
+    }
+    
+    false
+}
+
+/// Handle parsed server messages
+/// Returns true if the connection should be closed
+fn handle_server_message(
+    msg: ServerMessage,
+    snapshot_tx: &mpsc::UnboundedSender<ClientSnapshot>,
+    player_id_tx: &mpsc::UnboundedSender<u64>,
+) -> bool {
+    match msg {
+        ServerMessage::Welcome(welcome) => {
+            println!("Welcomed! Player ID: {}", welcome.player_id);
+            let _ = player_id_tx.send(welcome.player_id);
+            false
+        }
+        ServerMessage::StateUpdate(state_update) => {
+            let snapshot = state_update.snapshot;
+            snapshot_tx
+                .send(ClientSnapshot {
+                    snapshot,
+                    received_at: Instant::now(),
+                })
+                .is_err()
+        }
+        ServerMessage::Bye(bye) => {
+            println!("Server says goodbye: {}", bye.reason);
+            true
+        }
+    }
+}
+
 #[macroquad::main(window_conf)]
 async fn main() {
     // +++Create tokio runtime manually (macroquad does NOT supply a reactor)
@@ -110,59 +162,23 @@ async fn main() {
     // Spawn a task to receive messages from the server
     let read_handle = rt.spawn(async move {
         while let Some(msg) = read.next().await {
-            match msg {
+            let should_break = match msg {
                 Ok(Message::Text(text)) => {
-                    // Try to parse as ServerMessage
-                    match serde_json::from_str::<ServerMessage>(&text) {
-                        Ok(server_msg) => {
-                            match server_msg {
-                                ServerMessage::Welcome(welcome) => {
-                                    println!("Welcomed! Player ID: {}", welcome.player_id);
-                                    // Send player_id to main loop
-                                    let _ = player_id_tx.send(welcome.player_id);
-                                }
-                                ServerMessage::StateUpdate(state_update) => {
-                                    let snapshot = state_update.snapshot;
-                                    if snapshot_tx
-                                        .send(ClientSnapshot { 
-                                            snapshot, 
-                                            received_at: Instant::now() 
-                                        })
-                                        .is_err()
-                                    {
-                                        break;
-                                    }
-                                }
-                                ServerMessage::Bye(bye) => {
-                                    println!("Server says goodbye: {}", bye.reason);
-                                    break;
-                                }
-                            }
-                        }
-                        Err(_) => {
-                            // Try direct GameSnapshot parse as fallback
-                            if let Ok(snapshot) = serde_json::from_str::<GameSnapshot>(&text) {
-                                let _ = snapshot_tx
-                                    .send(ClientSnapshot { 
-                                        snapshot, 
-                                        received_at: Instant::now() 
-                                    })
-                                    .ok();
-                            }
-                        }
-                    }
+                    handle_text_message(&text, &snapshot_tx, &player_id_tx)
                 }
                 Ok(Message::Close(_)) => {
                     println!("Server closed connection");
-                    break;
+                    true
                 }
                 Err(e) => {
                     eprintln!("WebSocket error: {:?}", e);
-                    break;
+                    true
                 }
-                _ => {
-                    // Ignore other message types
-                }
+                _ => false, // Ignore other message types
+            };
+            
+            if should_break {
+                break;
             }
         }
         // Notify main loop that server disconnected
