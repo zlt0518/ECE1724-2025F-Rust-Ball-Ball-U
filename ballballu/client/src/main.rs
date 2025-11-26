@@ -204,6 +204,7 @@ async fn main() {
     let mut client_ready = false;  // Track if this client has pressed enter
     let mut player_name = String::new();  // Player name input
     let mut name_submitted = false;  // Track if name has been submitted
+    let mut join_time: Option<Instant> = None;  // Track when this client joined the game
 
     loop {
         // Check for shutdown signal (non-blocking)
@@ -225,6 +226,7 @@ async fn main() {
             if is_key_pressed(KeyCode::Enter) {
                 name_submitted = true;
                 client_ready = true;
+                join_time = Some(Instant::now());  // Record join time when player presses ENTER
                 let _ = input_tx.send(ClientMessage::Join { name: player_name.clone() });
                 let _ = input_tx.send(ClientMessage::Ready);
             }
@@ -307,7 +309,7 @@ async fn main() {
 
         // Render the game
         if let Some(ref snap) = latest_snapshot {
-            render_manager.render(&snap.snapshot, snap.received_at, player_id, client_ready, !name_submitted, &player_name);
+            render_manager.render(&snap.snapshot, snap.received_at, player_id, client_ready, !name_submitted, &player_name, join_time);
             
             // Show warning if no updates for a while
             if frames_without_update > 120 {

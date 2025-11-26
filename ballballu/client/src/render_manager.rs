@@ -19,7 +19,7 @@ impl RenderManager {
         }
     }
 
-    pub fn render(&mut self, snapshot: &GameSnapshot, received_at: Instant, player_id: Option<u64>, client_ready: bool, show_name_input: bool, player_name: &str) {
+    pub fn render(&mut self, snapshot: &GameSnapshot, received_at: Instant, player_id: Option<u64>, client_ready: bool, show_name_input: bool, player_name: &str, join_time: Option<Instant>) {
         // Clear screen with dark background
         clear_background(Color::from_rgba(10, 10, 15, 255));
 
@@ -169,7 +169,7 @@ impl RenderManager {
                     }
 
                     // Draw UI overlay
-                    self.draw_ui_overlay(snapshot);
+                    self.draw_ui_overlay(snapshot, join_time);
                 }
             }
             GameStatus::GameOver => {
@@ -292,7 +292,7 @@ impl RenderManager {
         }
     }
 
-    fn draw_ui_overlay(&self, snapshot: &GameSnapshot) {
+    fn draw_ui_overlay(&self, snapshot: &GameSnapshot, join_time: Option<Instant>) {
         let padding = 10.0;
         let line_height = 25.0;
         let mut y = padding;
@@ -303,9 +303,19 @@ impl RenderManager {
         // Draw semi-transparent background
         draw_rectangle(0.0, 0.0, 320.0, panel_height, Color::from_rgba(0, 0, 0, 180));
 
-        // Draw game info
+        // Draw game info - show elapsed time since joining instead of server tick
+        let elapsed_time_ms = if let Some(join_instant) = join_time {
+            join_instant.elapsed().as_millis() as u32
+        } else {
+            0
+        };
+        let total_secs = elapsed_time_ms / 1000;
+        let hours = total_secs / 3600;
+        let minutes = (total_secs % 3600) / 60;
+        let seconds = total_secs % 60;
+        
         draw_text(
-            &format!("Tick: {}", snapshot.tick),
+            &format!("Time: {:02}:{:02}:{:02}", hours, minutes, seconds),
             padding,
             y + 20.0,
             20.0,
