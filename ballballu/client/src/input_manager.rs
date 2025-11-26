@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use shared::protocol::{ClientMessage, UserInput};
+use shared::protocol::ClientMessage;
 use tokio::sync::mpsc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -17,26 +17,18 @@ impl InputManager {
     /// Poll for keyboard input and send to server
     /// Returns true if the application should exit
     pub fn poll_input(&self) -> bool {
-        let mut dx = 0.0;
-        let mut dy = 0.0;
-        let mut has_input = false;
-
-        // WASD keys
-        if is_key_down(KeyCode::W) || is_key_down(KeyCode::Up) {
-            dy = -1.0;
-            has_input = true;
+        // WASD keys - use is_key_pressed for one-click-one-step (detects key press, not hold)
+        if is_key_pressed(KeyCode::W) || is_key_pressed(KeyCode::Up) {
+            self.send_move(0.0, -1.0);
         }
-        if is_key_down(KeyCode::S) || is_key_down(KeyCode::Down) {
-            dy = 1.0;
-            has_input = true;
+        if is_key_pressed(KeyCode::S) || is_key_pressed(KeyCode::Down) {
+            self.send_move(0.0, 1.0);
         }
-        if is_key_down(KeyCode::A) || is_key_down(KeyCode::Left) {
-            dx = -1.0;
-            has_input = true;
+        if is_key_pressed(KeyCode::A) || is_key_pressed(KeyCode::Left) {
+            self.send_move(-1.0, 0.0);
         }
-        if is_key_down(KeyCode::D) || is_key_down(KeyCode::Right) {
-            dx = 1.0;
-            has_input = true;
+        if is_key_pressed(KeyCode::D) || is_key_pressed(KeyCode::Right) {
+            self.send_move(1.0, 0.0);
         }
 
         // ESC to quit
@@ -45,27 +37,27 @@ impl InputManager {
             return true;
         }
 
-        if has_input {
-            // Normalize diagonal movement
-            let magnitude = ((dx * dx + dy * dy) as f32).sqrt();
-            let normalized_dx = if magnitude > 0.0 { dx / magnitude } else { 0.0 };
-            let normalized_dy = if magnitude > 0.0 { dy / magnitude } else { 0.0 };
-
-            // Increment sequence number
-            let seq = SEQUENCE_NUMBER.fetch_add(1, Ordering::Relaxed) + 1;
-
-            // Send continuous input message to server
-            // Server will handle speed calculation based on player's score using mechanics
-            let input = UserInput {
-                dx: normalized_dx,
-                dy: normalized_dy,
-                sequence_number: seq,
-            };
-
-            let msg = ClientMessage::Input { input };
-            let _ = self.input_tx.send(msg);
-        }
-
         false
+    }
+
+    fn send_move(&self, dx: f32, dy: f32) {
+        // Increment sequence number
+        let _seq = SEQUENCE_NUMBER.fetch_add(1, Ordering::Relaxed) + 1;
+
+        // Send discrete move command (one step at a time)
+        // Each key press = one movement action with fixed distance
+        let distance = 50.0; // Fixed distance per step
+        
+        // Normalize
+        let magnitude = ((dx * dx + dy * dy) as f32).sqrt();
+        let normalized_dx = if magnitude > 0.0 { dx / magnitude } else { dx };
+        let normalized_dy = if magnitude > 0.0 { dy / magnitude } else { dy };
+        
+        let msg = ClientMessage::Move { 
+            dx: normalized_dx, 
+            dy: normalized_dy, 
+            distance 
+        };
+        let _ = self.input_tx.send(msg);
     }
 }

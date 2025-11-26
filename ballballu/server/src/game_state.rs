@@ -145,6 +145,10 @@ impl GameState {
                         }
                     }
                 }
+                
+                // Clear stored continuous input (for one-click-one-step model)
+                player_input.dx = 0.0;
+                player_input.dy = 0.0;
             }
         }
     }
