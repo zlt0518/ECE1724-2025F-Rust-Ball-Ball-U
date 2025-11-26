@@ -139,8 +139,8 @@ fn handle_player_player_collision(gs: &mut GameState) {
         if let Some(eaten) = gs.players.get(&eaten_id) {
             let eaten_score = eaten.score;
             
-            // Remove eaten player (this also removes input)
-            gs.remove_player(eaten_id);
+            // Respawn eaten player instead of removing (player stays connected)
+            gs.respawn_player(eaten_id);
             
             // Update eater
             if let Some(eater) = gs.players.get_mut(&eater_id) {

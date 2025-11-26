@@ -101,6 +101,9 @@ async fn main() {
     // Channel to signal shutdown
     let (shutdown_tx, mut shutdown_rx) = mpsc::unbounded_channel::<()>();
     
+    // Channel to send player_id from websocket task to main loop
+    let (player_id_tx, mut player_id_rx) = mpsc::unbounded_channel::<u64>();
+    
     // Initialize input manager
     let input_manager = input_manager::InputManager::new(input_tx.clone());
 
@@ -115,6 +118,8 @@ async fn main() {
                             match server_msg {
                                 ServerMessage::Welcome(welcome) => {
                                     println!("Welcomed! Player ID: {}", welcome.player_id);
+                                    // Send player_id to main loop
+                                    let _ = player_id_tx.send(welcome.player_id);
                                 }
                                 ServerMessage::StateUpdate(state_update) => {
                                     let snapshot = state_update.snapshot;
@@ -179,6 +184,7 @@ async fn main() {
     let mut latest_snapshot: Option<ClientSnapshot> = None;
     let mut connection_lost = false;
     let mut frames_without_update = 0;
+    let mut player_id: Option<u64> = None;
 
     loop {
         // Check for shutdown signal (non-blocking)
@@ -190,6 +196,12 @@ async fn main() {
         // Poll for keyboard input
         if input_manager.poll_input() {
             should_exit = true;
+        }
+
+        // Try to receive player_id (non-blocking)
+        while let Ok(id) = player_id_rx.try_recv() {
+            player_id = Some(id);
+            println!("Received player_id: {}", id);
         }
 
         // Try to receive new snapshots (non-blocking, drain all pending)
@@ -206,7 +218,7 @@ async fn main() {
 
         // Render the game
         if let Some(ref snap) = latest_snapshot {
-            render_manager.render(&snap.snapshot, snap.received_at);
+            render_manager.render(&snap.snapshot, snap.received_at, player_id);
             
             // Show warning if no updates for a while
             if frames_without_update > 120 {

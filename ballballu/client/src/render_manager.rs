@@ -19,7 +19,7 @@ impl RenderManager {
         }
     }
 
-    pub fn render(&mut self, snapshot: &GameSnapshot, received_at: Instant) {
+    pub fn render(&mut self, snapshot: &GameSnapshot, received_at: Instant, player_id: Option<u64>) {
         // Clear screen with dark background
         clear_background(Color::from_rgba(10, 10, 15, 255));
 
@@ -27,8 +27,15 @@ impl RenderManager {
         let screen_width = screen_width();
         let screen_height = screen_height();
 
-        // Update camera to follow the first player (usually the local player)
-        if let Some(player) = snapshot.players.first() {
+        // Update camera to follow the local player (by player_id)
+        // If player_id is set, find the player with that ID, otherwise follow first player
+        let player_to_follow = if let Some(id) = player_id {
+            snapshot.players.iter().find(|p| p.id == id)
+        } else {
+            snapshot.players.first()
+        };
+        
+        if let Some(player) = player_to_follow {
             // Use prediction for smooth camera movement
             let pred_seconds = received_at.elapsed().as_secs_f32();
             self.camera_x = player.x + player.vx * pred_seconds;

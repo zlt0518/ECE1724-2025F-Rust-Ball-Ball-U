@@ -108,7 +108,20 @@ impl WebSocketManager {
                 gs_state.lock().await.add_player(id);
 
                 // Phase 3: Register connection for broadcasting
-                connections.lock().await.insert(id, tx);
+                connections.lock().await.insert(id, tx.clone());
+
+                // Send Welcome message to the new player
+                let welcome_msg = ServerMessage::Welcome(shared::protocol::WelcomeMessage {
+                    player_id: id,
+                    constants: {
+                        let gs = gs_state.lock().await;
+                        gs.constants.clone()
+                    },
+                });
+                let welcome_text = serde_json::to_string(&welcome_msg).unwrap();
+                if tx.send(Message::Text(welcome_text)).is_err() {
+                    println!("Failed to send Welcome message to player {}", id);
+                }
 
                 // 3. 读消息
                 //    无论是 Close 还是错误，最后都会执行 remove_player
@@ -119,6 +132,15 @@ impl WebSocketManager {
                             match serde_json::from_str::<ClientMessage>(&txt) {
                                 Ok(client_msg) => {
                                     println!("Parsed ClientMessage from {}: {:?}", id, client_msg);
+                                    
+                                    // Handle Quit message by closing the connection
+                                    if matches!(client_msg, ClientMessage::Quit) {
+                                        println!("Player {} requested to quit, closing connection", id);
+                                        gs_state.lock().await.remove_player(id);
+                                        connections.lock().await.remove(&id);
+                                        break;
+                                    }
+                                    
                                     gs_state.lock().await.handle_message(id, client_msg);
                                 }
                                 Err(e) => {

@@ -251,6 +251,32 @@ impl GameState {
         println!("GameState: Player {} removed", id);
     }
 
+    /// Respawn a player after being eaten (resets to initial state at random position)
+    pub fn respawn_player(&mut self, id: u64) {
+        let base_radius = 10.0;
+        let (x, y) = self.find_empty_position(base_radius, 100)
+            .unwrap_or((1000.0, 1000.0)); // Fallback to center if all attempts fail
+        
+        if let Some(player) = self.players.get_mut(&id) {
+            player.x = x;
+            player.y = y;
+            player.radius = base_radius;
+            player.score = 0;
+            player.speed = self.constants.move_speed_base;
+            player.remaining_distance = 0.0;
+            player.vx = 0.0;
+            player.vy = 0.0;
+            println!("GameState: Player {} respawned at ({}, {})", id, x, y);
+        }
+        
+        // Reset input state
+        if let Some(player_input) = self.player_inputs.get_mut(&id) {
+            player_input.dx = 0.0;
+            player_input.dy = 0.0;
+            player_input.pending_move = None;
+        }
+    }
+
     /// Handle JSON from Client
     pub fn handle_message(&mut self, id: u64, msg: ClientMessage) {
         match msg {
@@ -276,8 +302,8 @@ impl GameState {
                 }
             }
             ClientMessage::Quit => {
-                println!("GameState: Player {} sent Quit", id);
-                self.remove_player(id);
+                // Quit is now handled in websocket_manager, this should not be reached
+                println!("GameState: Player {} sent Quit (should be handled by websocket_manager)", id);
             }
         }
     }
