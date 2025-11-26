@@ -193,8 +193,12 @@ async fn main() {
             should_exit = true;
         }
 
-        // Poll for keyboard input
-        if input_manager.poll_input() {
+        // Poll for keyboard input (one-click movement). We pass the local
+        // player's radius so the client can compute step distance.
+        let player_radius = latest_snapshot
+            .as_ref()
+            .and_then(|s| s.snapshot.players.first().map(|p| p.radius));
+        if input_manager.poll_input(player_radius) {
             should_exit = true;
         }
 
