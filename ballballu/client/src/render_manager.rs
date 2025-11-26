@@ -19,7 +19,7 @@ impl RenderManager {
         }
     }
 
-    pub fn render(&mut self, snapshot: &GameSnapshot, received_at: Instant, player_id: Option<u64>, client_ready: bool) {
+    pub fn render(&mut self, snapshot: &GameSnapshot, received_at: Instant, player_id: Option<u64>, client_ready: bool, show_name_input: bool, player_name: &str) {
         // Clear screen with dark background
         clear_background(Color::from_rgba(10, 10, 15, 255));
 
@@ -31,12 +31,12 @@ impl RenderManager {
         match snapshot.status {
             GameStatus::WaitingToStart => {
                 // Display start page
-                self.draw_start_page(screen_width, screen_height);
+                self.draw_start_page(screen_width, screen_height, show_name_input, player_name);
             }
             GameStatus::Playing => {
                 // If client hasn't pressed space yet, still show the start page
                 if !client_ready {
-                    self.draw_start_page(screen_width, screen_height);
+                    self.draw_start_page(screen_width, screen_height, show_name_input, player_name);
                 } else {
                     // Gameplay rendering
                     // Update camera to follow the local player (by player_id)
@@ -137,9 +137,14 @@ impl RenderManager {
                             );
 
                             // Draw player name above the circle
+                            let display_name = if player.name.is_empty() {
+                                format!("Player {}", player.id)
+                            } else {
+                                format!("Player {}: {}", player.id, player.name)
+                            };
                             let name_y = screen_y - screen_radius - 15.0;
                             let text_size = 20.0;
-                            let text_dims = measure_text(&player.name, None, text_size as u16, 1.0);
+                            let text_dims = measure_text(&display_name, None, text_size as u16, 1.0);
                             let name_x = screen_x - text_dims.width / 2.0;
 
                             // Draw name background
@@ -152,7 +157,7 @@ impl RenderManager {
                             );
 
                             // Draw name text
-                            draw_text(&player.name, name_x, name_y, text_size, WHITE);
+                            draw_text(&display_name, name_x, name_y, text_size, WHITE);
 
                             // Draw score below name
                             let score_text = format!("Score: {}", player.score);
@@ -352,8 +357,10 @@ impl RenderManager {
             
             draw_text(
                 &format!(
-                    "{}: S:{} R:{:.1} Spd:{:.0}",
-                    player.name, player.score, player.radius, expected_speed
+                    "Player {}{}: S:{} R:{:.1} Spd:{:.0}",
+                    player.id,
+                    if player.name.is_empty() { String::new() } else { format!(": {}", player.name) },
+                    player.score, player.radius, expected_speed
                 ),
                 padding,
                 y + 20.0,
@@ -394,7 +401,7 @@ impl RenderManager {
         colors[(player_id as usize) % colors.len()]
     }
 
-    fn draw_start_page(&self, screen_width: f32, screen_height: f32) {
+    fn draw_start_page(&self, screen_width: f32, screen_height: f32, show_name_input: bool, player_name: &str) {
         // Draw semi-transparent overlay
         draw_rectangle(0.0, 0.0, screen_width, screen_height, Color::from_rgba(0, 0, 0, 200));
 
@@ -430,12 +437,47 @@ impl RenderManager {
             draw_text(author, author_x, author_y, author_size, Color::from_rgba(200, 200, 200, 255));
         }
 
+        // Draw player name input box
+        if show_name_input {
+            let input_y = author_y_start + (authors.len() as f32 * 25.0) + 40.0;
+            
+            // Draw label
+            let label = "Enter Your Player Name (max 15 characters):";
+            let label_size = 20.0;
+            let label_dims = measure_text(label, None, label_size as u16, 1.0);
+            let label_x = screen_width / 2.0 - label_dims.width / 2.0;
+            draw_text(label, label_x, input_y, label_size, Color::from_rgba(200, 200, 200, 255));
+            
+            // Draw input box background
+            let box_width = 400.0;
+            let box_height = 40.0;
+            let box_x = screen_width / 2.0 - box_width / 2.0;
+            let box_y = input_y + 35.0;
+            draw_rectangle(box_x, box_y, box_width, box_height, Color::from_rgba(50, 50, 50, 255));
+            draw_rectangle_lines(box_x, box_y, box_width, box_height, 2.0, Color::from_rgba(200, 200, 200, 255));
+            
+            // Draw typed text
+            let text_size = 24.0;
+            draw_text(player_name, box_x + 10.0, box_y + 28.0, text_size, Color::from_rgba(255, 255, 255, 255));
+            
+            // Draw character count
+            let char_count_text = format!("{}/15", player_name.len());
+            let char_count_size = 16.0;
+            let char_count_dims = measure_text(&char_count_text, None, char_count_size as u16, 1.0);
+            let char_count_x = screen_width / 2.0 - char_count_dims.width / 2.0;
+            draw_text(&char_count_text, char_count_x, box_y + box_height + 25.0, char_count_size, Color::from_rgba(150, 150, 150, 255));
+        }
+
         // Draw instructions
-        let instruction = "Press ENTER to Start";
+        let instruction = if show_name_input {
+            "Type your name and press ENTER to continue"
+        } else {
+            "Press ENTER to Start"
+        };
         let instruction_size = 40.0;
         let instruction_dims = measure_text(instruction, None, instruction_size as u16, 1.0);
         let instruction_x = screen_width / 2.0 - instruction_dims.width / 2.0;
-        let instruction_y = screen_height / 2.0 + 60.0;
+        let instruction_y = screen_height / 2.0 + 120.0;
         draw_text(instruction, instruction_x, instruction_y, instruction_size, Color::from_rgba(255, 200, 100, 255));
 
         // Draw controls hint
