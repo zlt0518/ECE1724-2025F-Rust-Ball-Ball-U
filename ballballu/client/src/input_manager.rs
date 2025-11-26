@@ -16,6 +16,12 @@ impl InputManager {
     /// `player_radius` is used to scale the step distance; if `None`, a default
     /// base distance is used. Returns true if the application should exit.
     pub fn poll_input(&self, player_radius: Option<f32>) -> bool {
+        // Space to send Ready message
+        if is_key_pressed(KeyCode::Space) {
+            let _ = self.input_tx.send(ClientMessage::Ready);
+            return false;
+        }
+
         let mut dx = 0.0f32;
         let mut dy = 0.0f32;
         let mut has_press = false;

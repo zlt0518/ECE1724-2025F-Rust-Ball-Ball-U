@@ -6,6 +6,18 @@ pub mod protocol;
 pub mod objects;
 
 // ==========================
+//      Game Status
+// ==========================
+
+/// Current state of the game
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum GameStatus {
+    WaitingToStart,  // Start screen, waiting for players to press space
+    Playing,         // Game is running
+    GameOver,        // Game has ended
+}
+
+// ==========================
 //      Game Constants
 // ==========================
 
@@ -33,6 +45,7 @@ pub struct GameConstant {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameSnapshot {
     pub tick: u64,
+    pub status: GameStatus,  // Add game status
     pub players: Vec<PlayerSpec>,
     pub dots: Vec<Dot>,
     pub constants: GameConstant,

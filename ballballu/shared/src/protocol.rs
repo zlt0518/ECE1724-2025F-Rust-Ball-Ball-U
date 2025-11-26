@@ -27,6 +27,9 @@ pub enum ClientMessage {
     /// Discrete movement: move a fixed distance in direction
     Move { dx: f32, dy: f32, distance: f32 },
 
+    /// Player is ready to start the game (pressed space)
+    Ready,
+
     /// Client gracefully disconnects
     Quit,
 }

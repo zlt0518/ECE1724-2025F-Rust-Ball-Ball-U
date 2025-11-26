@@ -4,6 +4,7 @@ use rand::Rng;
 use shared::{
     GameConstant,
     GameSnapshot,
+    GameStatus,
     protocol::ClientMessage,
     objects::{PlayerSpec, Dot},
 };
@@ -18,11 +19,13 @@ struct PlayerInput {
 
 pub struct GameState {
     pub tick: u64,
+    pub status: GameStatus,  // Track current game status
     pub players: HashMap<u64, PlayerSpec>,
     pub dots: HashMap<u64, Dot>,
     pub constants: GameConstant,
     // Phase 4: Store player inputs separately
     player_inputs: HashMap<u64, PlayerInput>,
+    ready_players: HashMap<u64, bool>,  // Track which players are ready to start
     next_dot_id: u64,
 }
 
@@ -30,10 +33,12 @@ impl GameState {
     pub fn new(constants: GameConstant) -> Self {
         let mut gs = Self {
             tick: 0,
+            status: GameStatus::WaitingToStart,  // Start in waiting state
             players: HashMap::new(),
             dots: HashMap::new(),
             constants,
             player_inputs: HashMap::new(),
+            ready_players: HashMap::new(),
             next_dot_id: 1,
         };
         // Phase 5: Initialize dots
@@ -241,6 +246,8 @@ impl GameState {
         self.players.insert(id, p);
         // Phase 4: Initialize input to zero
         self.player_inputs.insert(id, PlayerInput { dx: 0.0, dy: 0.0, pending_move: None });
+        // Mark player as not ready (must press space to start)
+        self.ready_players.insert(id, false);
         println!("GameState: Player {} added at ({}, {})", id, x, y);
     }
 
@@ -248,6 +255,7 @@ impl GameState {
     pub fn remove_player(&mut self, id: u64) {
         self.players.remove(&id);
         self.player_inputs.remove(&id);
+        self.ready_players.remove(&id);
         println!("GameState: Player {} removed", id);
     }
 
@@ -298,11 +306,32 @@ impl GameState {
                     println!("GameState: Player {} queued move: dx={}, dy={}, distance={}", id, dx, dy, distance);
                 }
             }
+            ClientMessage::Ready => {
+                // Mark player as ready to start
+                self.ready_players.insert(id, true);
+                println!("GameState: Player {} is ready", id);
+                
+                // Check if all players are ready
+                if self.all_players_ready() {
+                    self.status = GameStatus::Playing;
+                    println!("GameState: All players ready! Starting game!");
+                }
+            }
             ClientMessage::Quit => {
                 // Quit is now handled in websocket_manager, this should not be reached
                 println!("GameState: Player {} sent Quit (should be handled by websocket_manager)", id);
             }
         }
+    }
+
+    /// Check if all connected players are ready
+    pub fn all_players_ready(&self) -> bool {
+        if self.players.is_empty() {
+            return false;
+        }
+        self.players.keys().all(|id| {
+            self.ready_players.get(id).copied().unwrap_or(false)
+        })
     }
 
     /// Apply pending moves to players
@@ -337,6 +366,7 @@ impl GameState {
     pub fn to_snapshot(&self) -> GameSnapshot {
         GameSnapshot {
             tick: self.tick,
+            status: self.status,  // Include game status
             players: self.players.values().cloned().collect(),
             dots: self.dots.values().cloned().collect(),
             constants: self.constants.clone(),

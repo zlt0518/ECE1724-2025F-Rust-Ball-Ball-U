@@ -2,6 +2,7 @@ use std::sync::Arc;
 use tokio::time::{interval, Duration};
 use crate::websocket_manager::WebSocketManager;
 use crate::game_state::GameState;
+use shared::GameStatus;
 use shared::mechanics::{update_position, dot_collision_check, cells_collisions_check};
 
 pub struct GameLoop {
@@ -28,32 +29,35 @@ impl GameLoop {
             {
                 let mut gs = self.ws.game_state.lock().await;
                 
-                // Apply pending moves from input commands
-                gs.apply_pending_moves();
-                
-                // Phase 4: Update player positions based on remaining distance
-                let player_ids: Vec<u64> = gs.players.keys().cloned().collect();
-                let move_speed_base = gs.constants.move_speed_base;
-                for id in player_ids {
-                    // Then get mutable player reference
-                    if let Some(player) = gs.players.get_mut(&id) {
-                        // Calculate current speed based on score
-                        let current_speed = shared::mechanics::calculate_speed_from_score(
-                            player.score,
-                            move_speed_base
-                        );
-                        player.speed = current_speed;
-                        
-                        // Update position using shared mechanics (new signature)
-                        update_position(player, current_speed, tick_ms as f32);
+                // Only process game updates if game is playing
+                if gs.status == GameStatus::Playing {
+                    // Apply pending moves from input commands
+                    gs.apply_pending_moves();
+                    
+                    // Phase 4: Update player positions based on remaining distance
+                    let player_ids: Vec<u64> = gs.players.keys().cloned().collect();
+                    let move_speed_base = gs.constants.move_speed_base;
+                    for id in player_ids {
+                        // Then get mutable player reference
+                        if let Some(player) = gs.players.get_mut(&id) {
+                            // Calculate current speed based on score
+                            let current_speed = shared::mechanics::calculate_speed_from_score(
+                                player.score,
+                                move_speed_base
+                            );
+                            player.speed = current_speed;
+                            
+                            // Update position using shared mechanics (new signature)
+                            update_position(player, current_speed, tick_ms as f32);
+                        }
                     }
+
+                    // Phase 5: Handle player-dot collisions
+                    handle_player_dot_collision(&mut gs);
+
+                    // Phase 5: Handle player-player collisions
+                    handle_player_player_collision(&mut gs);
                 }
-
-                // Phase 5: Handle player-dot collisions
-                handle_player_dot_collision(&mut gs);
-
-                // Phase 5: Handle player-player collisions
-                handle_player_player_collision(&mut gs);
 
                 // Phase 3: Increment tick
                 gs.tick += 1;
