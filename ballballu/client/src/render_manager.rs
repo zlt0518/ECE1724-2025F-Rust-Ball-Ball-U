@@ -416,7 +416,7 @@ impl RenderManager {
         draw_rectangle(0.0, 0.0, screen_width, screen_height, Color::from_rgba(0, 0, 0, 200));
 
         // Draw title
-        let title = "ECE1724:: RUST:: BALL BALL U";
+        let title = "ECE1724::RUST::BALL BALL U";
         let title_size = 80.0;
         let title_dims = measure_text(title, None, title_size as u16, 1.0);
         let title_x = screen_width / 2.0 - title_dims.width / 2.0;
@@ -478,23 +478,39 @@ impl RenderManager {
             draw_text(&char_count_text, char_count_x, box_y + box_height + 25.0, char_count_size, Color::from_rgba(150, 150, 150, 255));
         }
 
-        // Draw instructions
-        let instruction = if show_name_input {
-            "Type your name and press ENTER to continue"
+        // Instruction text depends on whether name is empty or not
+        let instruction = if player_name.is_empty() {
+            "Press ENTER to start as Anonymous"
         } else {
-            "Press ENTER to Start"
+            "Press ENTER to continue"
         };
-        let instruction_size = 40.0;
+
+        let instruction_size = 32.0;
         let instruction_dims = measure_text(instruction, None, instruction_size as u16, 1.0);
         let instruction_x = screen_width / 2.0 - instruction_dims.width / 2.0;
-        let instruction_y = screen_height / 2.0 + 120.0;
-        draw_text(instruction, instruction_x, instruction_y, instruction_size, Color::from_rgba(255, 200, 100, 255));
 
+        // Place instruction below input box (input box bottom = box_y + box_height)
+        let instruction_y = {
+            let authors_height = authors.len() as f32 * 25.0;
+            let input_y = author_y_start + authors_height + 40.0;
+            let box_y = input_y + 35.0;
+            box_y + 40.0 + 70.0  // box height + padding
+        };
+
+        draw_text(
+            instruction,
+            instruction_x,
+            instruction_y,
+            instruction_size,
+            Color::from_rgba(255, 200, 100, 255),
+        );
+
+        // (Removed controls from start page)
         // Draw controls hint
-        let controls = "Use WASD or Arrow Keys to move\nESC to quit";
-        let controls_size = 20.0;
-        let controls_y = screen_height - 100.0;
-        draw_text(controls, 20.0, controls_y, controls_size, Color::from_rgba(200, 200, 200, 200));
+        // let controls = "Use WASD or Arrow Keys to move\nESC to quit";
+        // let controls_size = 20.0;
+        // let controls_y = screen_height - 100.0;
+        // draw_text(controls, 20.0, controls_y, controls_size, Color::from_rgba(200, 200, 200, 200));
     }
 
     fn draw_game_over_page(&self, screen_width: f32, screen_height: f32) {
