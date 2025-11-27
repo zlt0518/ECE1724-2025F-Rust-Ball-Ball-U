@@ -195,10 +195,11 @@ impl RenderManager {
                     }
                 }
             }
-            GameStatus::GameOver => {
-                // Display game over screen
-                self.draw_game_over_page(screen_width, screen_height);
-            }
+            // May not be used for argio style game
+            // GameStatus::GameOver => {
+            //     // Display game over screen
+            //     self.draw_game_over_page(screen_width, screen_height);
+            // }
         }
     }
 
@@ -539,24 +540,25 @@ impl RenderManager {
         // draw_text(controls, 20.0, controls_y, controls_size, Color::from_rgba(200, 200, 200, 200));
     }
 
-    fn draw_game_over_page(&self, screen_width: f32, screen_height: f32) {
-        // Draw semi-transparent overlay
-        draw_rectangle(0.0, 0.0, screen_width, screen_height, Color::from_rgba(0, 0, 0, 200));
+    // May not be used for argio style game
+    // fn draw_game_over_page(&self, screen_width: f32, screen_height: f32) {
+    //     // Draw semi-transparent overlay
+    //     draw_rectangle(0.0, 0.0, screen_width, screen_height, Color::from_rgba(0, 0, 0, 200));
 
-        // Draw title
-        let title = "GAME OVER";
-        let title_size = 80.0;
-        let title_dims = measure_text(title, None, title_size as u16, 1.0);
-        let title_x = screen_width / 2.0 - title_dims.width / 2.0;
-        let title_y = screen_height / 2.0 - 60.0;
-        draw_text(title, title_x, title_y, title_size, Color::from_rgba(255, 100, 100, 255));
+    //     // Draw title
+    //     let title = "GAME OVER";
+    //     let title_size = 80.0;
+    //     let title_dims = measure_text(title, None, title_size as u16, 1.0);
+    //     let title_x = screen_width / 2.0 - title_dims.width / 2.0;
+    //     let title_y = screen_height / 2.0 - 60.0;
+    //     draw_text(title, title_x, title_y, title_size, Color::from_rgba(255, 100, 100, 255));
 
-        // Draw restart instruction
-        let restart = "Press ENTER to Return to Start";
-        let restart_size = 30.0;
-        let restart_dims = measure_text(restart, None, restart_size as u16, 1.0);
-        let restart_x = screen_width / 2.0 - restart_dims.width / 2.0;
-        let restart_y = screen_height / 2.0 + 60.0;
-        draw_text(restart, restart_x, restart_y, restart_size, Color::from_rgba(255, 200, 100, 255));
-    }
+    //     // Draw restart instruction
+    //     let restart = "Press ENTER to Return to Start";
+    //     let restart_size = 30.0;
+    //     let restart_dims = measure_text(restart, None, restart_size as u16, 1.0);
+    //     let restart_x = screen_width / 2.0 - restart_dims.width / 2.0;
+    //     let restart_y = screen_height / 2.0 + 60.0;
+    //     draw_text(restart, restart_x, restart_y, restart_size, Color::from_rgba(255, 200, 100, 255));
+    // }
 }

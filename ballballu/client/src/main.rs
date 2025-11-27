@@ -14,7 +14,7 @@ use std::time::Instant;
 
 fn window_conf() -> Conf {
     Conf {
-        window_title: "Ball Ball U - Agar.io Clone".to_owned(),
+        window_title: "Ball Ball U".to_owned(),
         window_width: 1280,
         window_height: 720,
         window_resizable: true,
