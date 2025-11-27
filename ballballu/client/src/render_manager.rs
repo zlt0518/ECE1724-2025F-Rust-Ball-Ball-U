@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use shared::{GameSnapshot, GameStatus, mechanics};
+use shared::{GameSnapshot, GameStatus};
 use std::time::Instant;
 
 pub struct RenderManager {
@@ -185,7 +185,14 @@ impl RenderManager {
                     }
 
                     // Draw UI overlay
-                    self.draw_ui_overlay(snapshot, join_time);
+                    self.draw_ui_overlay(snapshot,player_id, join_time);
+
+                    // Show controls panel only for first 3 seconds after joining
+                    if let Some(t) = join_time {
+                        if t.elapsed().as_secs_f32() < 3.0 {
+                            self.draw_controls_panel();
+                        }
+                    }
                 }
             }
             GameStatus::GameOver => {
@@ -308,110 +315,113 @@ impl RenderManager {
         }
     }
 
-    fn draw_ui_overlay(&self, snapshot: &GameSnapshot, join_time: Option<Instant>) {
+    fn draw_ui_overlay(&self, snapshot: &GameSnapshot, player_id: Option<u64>, join_time: Option<Instant>) {
         let padding = 10.0;
-        let line_height = 25.0;
+        let line = 25.0;
         let mut y = padding;
 
-        // Calculate panel height
-        let panel_height = 120.0 + snapshot.players.len() as f32 * line_height;
+        // local player score
+        let local_score = player_id
+            .and_then(|id| snapshot.players.iter().find(|p| p.id == id))
+            .map(|p| p.score)
+            .unwrap_or(0);
 
-        // Draw semi-transparent background
-        draw_rectangle(0.0, 0.0, 320.0, panel_height, Color::from_rgba(0, 0, 0, 180));
-
-        // Draw game info - show elapsed time since joining instead of server tick
-        let elapsed_time_ms = if let Some(join_instant) = join_time {
-            join_instant.elapsed().as_millis() as u32
-        } else {
-            0
-        };
-        let total_secs = elapsed_time_ms / 1000;
-        let hours = total_secs / 3600;
-        let minutes = (total_secs % 3600) / 60;
-        let seconds = total_secs % 60;
-        
-        draw_text(
-            &format!("Time: {:02}:{:02}:{:02}", hours, minutes, seconds),
-            padding,
-            y + 20.0,
-            20.0,
-            YELLOW,
-        );
-        y += line_height;
-
-        draw_text(
-            &format!("Players: {}", snapshot.players.len()),
-            padding,
-            y + 20.0,
-            20.0,
-            YELLOW,
-        );
-        y += line_height;
-
-        draw_text(
-            &format!("Dots: {}", snapshot.dots.len()),
-            padding,
-            y + 20.0,
-            20.0,
-            YELLOW,
-        );
-        y += line_height;
-
-        // Draw separator
-        draw_line(
-            padding,
-            y + 10.0,
-            300.0,
-            y + 10.0,
-            1.0,
-            Color::from_rgba(100, 100, 100, 255),
-        );
-        y += 20.0;
-
-        // Draw player scores (sorted by score)
+        // top 3 leaderboard
         let mut players = snapshot.players.clone();
         players.sort_by(|a, b| b.score.cmp(&a.score));
+        let top3 = players.into_iter().take(3).collect::<Vec<_>>();
 
-        for player in &players {
-            let color = Self::get_player_color(player.id);
-            
-            // Calculate expected speed based on mechanics
-            let expected_speed = mechanics::calculate_speed_from_score(
-                player.score,
-                snapshot.constants.move_speed_base,
-            );
-            
+        // panel height
+        let panel_h = 120.0 + top3.len() as f32 * line;
+
+        // background box
+        draw_rectangle(0.0, 0.0, 260.0, panel_h, Color::from_rgba(0, 0, 0, 180));
+
+        // time since join
+        let elapsed_ms = join_time.map(|t| t.elapsed().as_millis() as u32).unwrap_or(0);
+        let secs = elapsed_ms / 1000;
+        let h = secs / 3600;
+        let m = (secs % 3600) / 60;
+        let s = secs % 60;
+
+        draw_text(
+            &format!("Time: {:02}:{:02}:{:02}", h, m, s),
+            padding,
+            y + 20.0,
+            20.0,
+            YELLOW,
+        );
+        y += line;
+
+        // local score
+        draw_text(
+            &format!("Score: {}", local_score),
+            padding,
+            y + 20.0,
+            20.0,
+            YELLOW,
+        );
+        y += line;
+
+        // separator
+        draw_line(padding, y + 10.0, 240.0, y + 10.0, 1.0, Color::from_rgba(120, 120, 120, 255));
+        y += 20.0;
+
+        draw_text("Top Players:", padding, y + 20.0, 18.0, WHITE);
+        y += line;
+
+        // top 3 entries
+        for (i, p) in top3.iter().enumerate() {
+            let color = Self::get_player_color(p.id);
+
+            let name = if p.name.is_empty() { "Anonymous" } else { p.name.as_str() };
+
             draw_text(
-                &format!(
-                    "Player {}{}: S:{} R:{:.1} Spd:{:.0}",
-                    player.id,
-                    if player.name.is_empty() { String::new() } else { format!(": {}", player.name) },
-                    player.score, player.radius, expected_speed
-                ),
+                &format!("{}. {} (S:{})", i + 1, name, p.score),
                 padding,
                 y + 20.0,
                 18.0,
                 color,
             );
-            y += line_height;
+            y += line;
         }
+    }
 
-        // Draw controls hint at bottom
-        let controls_y = screen_height() - 100.0;
-        draw_rectangle(
-            0.0,
-            controls_y,
-            320.0,
-            100.0,
-            Color::from_rgba(0, 0, 0, 180),
+    fn draw_controls_panel(&self) {
+        let w = 260.0;
+        let h = 90.0;
+        let x = 10.0;
+        let y = screen_height() - h - 10.0;
+
+        // Background
+        draw_rectangle(x, y, w, h, Color::from_rgba(0, 0, 0, 180));
+
+        // Title
+        draw_text(
+            "Controls:",
+            x + 10.0,
+            y + 28.0,
+            20.0,
+            Color::from_rgba(200, 200, 200, 255),
         );
-        
-        y = controls_y + 10.0;
-        draw_text("Controls:", padding, y + 20.0, 18.0, Color::from_rgba(150, 150, 150, 255));
-        y += 25.0;
-        draw_text("WASD / Arrow Keys - Move", padding, y + 20.0, 16.0, WHITE);
-        y += 20.0;
-        draw_text("ESC - Quit", padding, y + 20.0, 16.0, WHITE);
+
+        // WASD
+        draw_text(
+            "WASD / Arrow Keys - Move",
+            x + 10.0,
+            y + 50.0,
+            16.0,
+            WHITE,
+        );
+
+        // Quit
+        draw_text(
+            "ESC - Quit",
+            x + 10.0,
+            y + 70.0,
+            16.0,
+            WHITE,
+        );
     }
 
     fn get_player_color(player_id: u64) -> Color {
