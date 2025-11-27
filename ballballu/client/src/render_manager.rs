@@ -136,35 +136,51 @@ impl RenderManager {
                                 Color::from_rgba(255, 255, 255, 120),
                             );
 
-                            // Draw player name above the circle
-                            let display_name = if player.name.is_empty() {
+                            // Draw player name and score stacked above the circle (avoid overlap as radius grows)
+                            let display_name = if player.name.trim().is_empty() {
                                 format!("Player {}", player.id)
                             } else {
-                                format!("Player {}: {}", player.id, player.name)
+                                player.name.clone()
                             };
-                            let name_y = screen_y - screen_radius - 15.0;
-                            let text_size = 20.0;
-                            let text_dims = measure_text(&display_name, None, text_size as u16, 1.0);
-                            let name_x = screen_x - text_dims.width / 2.0;
+
+                            // Text sizes
+                            let name_text_size = 20u16;
+                            let score_text_size = 16u16;
+
+                            // Prepare texts and dimensions
+                            let name_dims = measure_text(&display_name, None, name_text_size, 1.0);
+                            let score_text = format!("Score: {}", player.score);
+                            let score_dims = measure_text(&score_text, None, score_text_size, 1.0);
+
+                            // Spacing and padding (pixels)
+                            let padding_between_circle_and_stack = 8.0; // gap from circle top to stacked texts
+                            let inter_text_spacing = 10.0; // spacing between name and score
+
+                            // Total stacked height (approx) and top Y of the stack
+                            let stack_height = name_dims.height + inter_text_spacing + score_dims.height;
+                            let stack_top = screen_y - screen_radius - padding_between_circle_and_stack - stack_height;
+
+                            // Compute baseline positions consistent with how measure_text and draw_text are used.
+                            // The previous code used "name_y - text_dims.height + 2.0" for rectangle top, so we keep a small offset of 2.0 to match visuals.
+                            let name_y = stack_top + name_dims.height - 2.0;
+                            let name_x = screen_x - name_dims.width / 2.0;
 
                             // Draw name background
                             draw_rectangle(
                                 name_x - 4.0,
-                                name_y - text_dims.height + 2.0,
-                                text_dims.width + 8.0,
-                                text_dims.height + 4.0,
+                                name_y - name_dims.height + 2.0,
+                                name_dims.width + 8.0,
+                                name_dims.height + 4.0,
                                 Color::from_rgba(0, 0, 0, 180),
                             );
 
                             // Draw name text
-                            draw_text(&display_name, name_x, name_y, text_size, WHITE);
+                            draw_text(&display_name, name_x, name_y, name_text_size as f32, WHITE);
 
-                            // Draw score below name
-                            let score_text = format!("Score: {}", player.score);
-                            let score_dims = measure_text(&score_text, None, 16, 1.0);
+                            // Score baseline: placed below name with configured spacing
                             let score_x = screen_x - score_dims.width / 2.0;
-                            let score_y = name_y + 18.0;
-                            draw_text(&score_text, score_x, score_y, 16.0, Color::from_rgba(200, 200, 200, 255));
+                            let score_y = stack_top + name_dims.height + inter_text_spacing + score_dims.height - 2.0;
+                            draw_text(&score_text, score_x, score_y, score_text_size as f32, Color::from_rgba(200, 200, 200, 255));
                         }
                     }
 

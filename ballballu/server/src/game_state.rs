@@ -9,13 +9,22 @@ use shared::{
     objects::{PlayerSpec, Dot},
 };
 
-// Phase 4: Store player input direction
 #[derive(Debug, Clone)]
 struct PlayerInput {
     pub dx: f32,
     pub dy: f32,
     pub pending_move: Option<(f32, f32, f32)>, // (dx, dy, distance) for next move
 }
+
+const RANDOM_NAMES: &[&str] = &[
+    "Fox", "Wolf", "Bear", "Panda", "Dragon", "Eagle", "Falcon", "Hawk",
+    "Tiger", "Lion", "Shark", "Cobra", "Viper", 
+    "Cactus", "Magma", "Storm", "Comet", "Meteor",
+    "Nebula", "Galaxy", "Cosmos", "Star", "Nova", "Photon",
+    "Pixel", "Shadow", "Ghost", "Ninja", "Knight", "Wizard",
+    "Golem", "Frost", "Flame", "Ice", "Wind",
+    "Bee", "Ant", "Crab", "Turtle", "Monkey", "Otter",
+];
 
 pub struct GameState {
     pub tick: u64,
@@ -44,6 +53,14 @@ impl GameState {
         // Phase 5: Initialize dots
         gs.spawn_initial_dots(150);
         gs
+    }
+
+    fn random_anonymous_name(&self) -> String {
+        use rand::seq::SliceRandom;
+
+        let mut rng = rand::thread_rng();
+        let word = RANDOM_NAMES.choose(&mut rng).unwrap();
+        format!("Anonymous{}", word)
     }
 
     /// Helper function to calculate distance between two points
@@ -232,7 +249,7 @@ impl GameState {
         
         let p = PlayerSpec {
             id,
-            name: format!("Player{}", id),
+            name: self.random_anonymous_name(),
             x,
             y,
             radius: base_radius,
@@ -290,9 +307,12 @@ impl GameState {
         match msg {
             ClientMessage::Join { name } => {
                 if let Some(p) = self.players.get_mut(&id) {
-                    p.name = name.clone();
+                    let trimmed = name.trim();
+                    if !trimmed.is_empty() {
+                        p.name = trimmed.to_string();
+                    }
+                    println!("GameState: Player {} final name = {}", id, p.name);
                 }
-                println!("GameState: Player {} set name to {}", id, name);
             }
             ClientMessage::Input { input } => {
                 // Input message not used in current implementation
