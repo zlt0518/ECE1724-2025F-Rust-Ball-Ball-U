@@ -23,7 +23,7 @@ impl WebSocketManager {
     pub async fn new(addr: &str) -> Self {
         let constants = shared::GameConstant {
             tick_interval_ms: 50,
-            collide_size_fraction: 1.1,
+            collide_size_fraction: 1.001,
             move_speed_base: 150.0,
             dot_radius: 5.0,
         };

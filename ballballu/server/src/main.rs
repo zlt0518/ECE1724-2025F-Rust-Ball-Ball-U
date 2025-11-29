@@ -12,12 +12,12 @@ use http_server::HttpServer;
 #[tokio::main]
 async fn main() {
     // WebSocket server for game communication
-    let ws = Arc::new(WebSocketManager::new("0.0.0.0:34568").await);
+    let ws = Arc::new(WebSocketManager::new("128.100.8.107:34568").await);
     let game_loop = GameLoop::new(ws.clone());
 
     // HTTP server for static files (test.html, styles.css, app.js)
     let static_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("static");
-    let http_server = HttpServer::new("0.0.0.0:34567", static_dir);
+    let http_server = HttpServer::new("128.100.8.107:34567", static_dir);
 
     // Spawn WebSocket accept loop
     let ws_clone = ws.clone();
