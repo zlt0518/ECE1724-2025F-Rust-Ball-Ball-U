@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use shared::{GameSnapshot, GameStatus, mechanics};
+use shared::{GameSnapshot, GameStatus};
 use std::time::Instant;
 
 pub struct RenderManager {
@@ -19,7 +19,7 @@ impl RenderManager {
         }
     }
 
-    pub fn render(&mut self, snapshot: &GameSnapshot, received_at: Instant, player_id: Option<u64>, client_ready: bool) {
+    pub fn render(&mut self, snapshot: &GameSnapshot, received_at: Instant, player_id: Option<u64>, client_ready: bool, show_name_input: bool, player_name: &str, join_time: Option<Instant>) {
         // Clear screen with dark background
         clear_background(Color::from_rgba(10, 10, 15, 255));
 
@@ -31,12 +31,12 @@ impl RenderManager {
         match snapshot.status {
             GameStatus::WaitingToStart => {
                 // Display start page
-                self.draw_start_page(screen_width, screen_height);
+                self.draw_start_page(screen_width, screen_height, show_name_input, player_name);
             }
             GameStatus::Playing => {
                 // If client hasn't pressed space yet, still show the start page
                 if !client_ready {
-                    self.draw_start_page(screen_width, screen_height);
+                    self.draw_start_page(screen_width, screen_height, show_name_input, player_name);
                 } else {
                     // Gameplay rendering
                     // Update camera to follow the local player (by player_id)
@@ -136,37 +136,66 @@ impl RenderManager {
                                 Color::from_rgba(255, 255, 255, 120),
                             );
 
-                            // Draw player name above the circle
-                            let name_y = screen_y - screen_radius - 15.0;
-                            let text_size = 20.0;
-                            let text_dims = measure_text(&player.name, None, text_size as u16, 1.0);
-                            let name_x = screen_x - text_dims.width / 2.0;
+                            // Draw player name and score stacked above the circle (avoid overlap as radius grows)
+                            let display_name = if player.name.trim().is_empty() {
+                                format!("Player {}", player.id)
+                            } else {
+                                player.name.clone()
+                            };
+
+                            // Text sizes
+                            let name_text_size = 20u16;
+                            let score_text_size = 16u16;
+
+                            // Prepare texts and dimensions
+                            let name_dims = measure_text(&display_name, None, name_text_size, 1.0);
+                            let score_text = format!("Score: {}", player.score);
+                            let score_dims = measure_text(&score_text, None, score_text_size, 1.0);
+
+                            // Spacing and padding (pixels)
+                            let padding_between_circle_and_stack = 8.0; // gap from circle top to stacked texts
+                            let inter_text_spacing = 10.0; // spacing between name and score
+
+                            // Total stacked height (approx) and top Y of the stack
+                            let stack_height = name_dims.height + inter_text_spacing + score_dims.height;
+                            let stack_top = screen_y - screen_radius - padding_between_circle_and_stack - stack_height;
+
+                            // Compute baseline positions consistent with how measure_text and draw_text are used.
+                            // The previous code used "name_y - text_dims.height + 2.0" for rectangle top, so we keep a small offset of 2.0 to match visuals.
+                            let name_y = stack_top + name_dims.height - 2.0;
+                            let name_x = screen_x - name_dims.width / 2.0;
 
                             // Draw name background
                             draw_rectangle(
                                 name_x - 4.0,
-                                name_y - text_dims.height + 2.0,
-                                text_dims.width + 8.0,
-                                text_dims.height + 4.0,
+                                name_y - name_dims.height + 2.0,
+                                name_dims.width + 8.0,
+                                name_dims.height + 4.0,
                                 Color::from_rgba(0, 0, 0, 180),
                             );
 
                             // Draw name text
-                            draw_text(&player.name, name_x, name_y, text_size, WHITE);
+                            draw_text(&display_name, name_x, name_y, name_text_size as f32, WHITE);
 
-                            // Draw score below name
-                            let score_text = format!("Score: {}", player.score);
-                            let score_dims = measure_text(&score_text, None, 16, 1.0);
+                            // Score baseline: placed below name with configured spacing
                             let score_x = screen_x - score_dims.width / 2.0;
-                            let score_y = name_y + 18.0;
-                            draw_text(&score_text, score_x, score_y, 16.0, Color::from_rgba(200, 200, 200, 255));
+                            let score_y = stack_top + name_dims.height + inter_text_spacing + score_dims.height - 2.0;
+                            draw_text(&score_text, score_x, score_y, score_text_size as f32, Color::from_rgba(200, 200, 200, 255));
                         }
                     }
 
                     // Draw UI overlay
-                    self.draw_ui_overlay(snapshot);
+                    self.draw_ui_overlay(snapshot,player_id, join_time);
+
+                    // Show controls panel only for first 3 seconds after joining
+                    if let Some(t) = join_time {
+                        if t.elapsed().as_secs_f32() < 3.0 {
+                            self.draw_controls_panel();
+                        }
+                    }
                 }
             }
+            // May not be used for argio style game
             GameStatus::GameOver => {
                 // Display game over screen
                 self.draw_game_over_page(screen_width, screen_height);
@@ -287,98 +316,113 @@ impl RenderManager {
         }
     }
 
-    fn draw_ui_overlay(&self, snapshot: &GameSnapshot) {
+    fn draw_ui_overlay(&self, snapshot: &GameSnapshot, player_id: Option<u64>, join_time: Option<Instant>) {
         let padding = 10.0;
-        let line_height = 25.0;
+        let line = 25.0;
         let mut y = padding;
 
-        // Calculate panel height
-        let panel_height = 120.0 + snapshot.players.len() as f32 * line_height;
+        // local player score
+        let local_score = player_id
+            .and_then(|id| snapshot.players.iter().find(|p| p.id == id))
+            .map(|p| p.score)
+            .unwrap_or(0);
 
-        // Draw semi-transparent background
-        draw_rectangle(0.0, 0.0, 320.0, panel_height, Color::from_rgba(0, 0, 0, 180));
-
-        // Draw game info
-        draw_text(
-            &format!("Tick: {}", snapshot.tick),
-            padding,
-            y + 20.0,
-            20.0,
-            YELLOW,
-        );
-        y += line_height;
-
-        draw_text(
-            &format!("Players: {}", snapshot.players.len()),
-            padding,
-            y + 20.0,
-            20.0,
-            YELLOW,
-        );
-        y += line_height;
-
-        draw_text(
-            &format!("Dots: {}", snapshot.dots.len()),
-            padding,
-            y + 20.0,
-            20.0,
-            YELLOW,
-        );
-        y += line_height;
-
-        // Draw separator
-        draw_line(
-            padding,
-            y + 10.0,
-            300.0,
-            y + 10.0,
-            1.0,
-            Color::from_rgba(100, 100, 100, 255),
-        );
-        y += 20.0;
-
-        // Draw player scores (sorted by score)
+        // top 3 leaderboard
         let mut players = snapshot.players.clone();
         players.sort_by(|a, b| b.score.cmp(&a.score));
+        let top3 = players.into_iter().take(3).collect::<Vec<_>>();
 
-        for player in &players {
-            let color = Self::get_player_color(player.id);
-            
-            // Calculate expected speed based on mechanics
-            let expected_speed = mechanics::calculate_speed_from_score(
-                player.score,
-                snapshot.constants.move_speed_base,
-            );
-            
+        // panel height
+        let panel_h = 120.0 + top3.len() as f32 * line;
+
+        // background box
+        draw_rectangle(0.0, 0.0, 260.0, panel_h, Color::from_rgba(0, 0, 0, 180));
+
+        // time since join
+        let elapsed_ms = join_time.map(|t| t.elapsed().as_millis() as u32).unwrap_or(0);
+        let secs = elapsed_ms / 1000;
+        let h = secs / 3600;
+        let m = (secs % 3600) / 60;
+        let s = secs % 60;
+
+        draw_text(
+            &format!("Time: {:02}:{:02}:{:02}", h, m, s),
+            padding,
+            y + 20.0,
+            20.0,
+            YELLOW,
+        );
+        y += line;
+
+        // local score
+        draw_text(
+            &format!("Score: {}", local_score),
+            padding,
+            y + 20.0,
+            20.0,
+            YELLOW,
+        );
+        y += line;
+
+        // separator
+        draw_line(padding, y + 10.0, 240.0, y + 10.0, 1.0, Color::from_rgba(120, 120, 120, 255));
+        y += 20.0;
+
+        draw_text("Top Players:", padding, y + 20.0, 18.0, WHITE);
+        y += line;
+
+        // top 3 entries
+        for (i, p) in top3.iter().enumerate() {
+            let color = Self::get_player_color(p.id);
+
+            let name = if p.name.is_empty() { "Anonymous" } else { p.name.as_str() };
+
             draw_text(
-                &format!(
-                    "{}: S:{} R:{:.1} Spd:{:.0}",
-                    player.name, player.score, player.radius, expected_speed
-                ),
+                &format!("{}. {} (S:{})", i + 1, name, p.score),
                 padding,
                 y + 20.0,
                 18.0,
                 color,
             );
-            y += line_height;
+            y += line;
         }
+    }
 
-        // Draw controls hint at bottom
-        let controls_y = screen_height() - 100.0;
-        draw_rectangle(
-            0.0,
-            controls_y,
-            320.0,
-            100.0,
-            Color::from_rgba(0, 0, 0, 180),
+    fn draw_controls_panel(&self) {
+        let w = 260.0;
+        let h = 90.0;
+        let x = 10.0;
+        let y = screen_height() - h - 10.0;
+
+        // Background
+        draw_rectangle(x, y, w, h, Color::from_rgba(0, 0, 0, 180));
+
+        // Title
+        draw_text(
+            "Controls:",
+            x + 10.0,
+            y + 28.0,
+            20.0,
+            Color::from_rgba(200, 200, 200, 255),
         );
-        
-        y = controls_y + 10.0;
-        draw_text("Controls:", padding, y + 20.0, 18.0, Color::from_rgba(150, 150, 150, 255));
-        y += 25.0;
-        draw_text("WASD / Arrow Keys - Move", padding, y + 20.0, 16.0, WHITE);
-        y += 20.0;
-        draw_text("ESC - Quit", padding, y + 20.0, 16.0, WHITE);
+
+        // WASD
+        draw_text(
+            "WASD / Arrow Keys - Move",
+            x + 10.0,
+            y + 50.0,
+            16.0,
+            WHITE,
+        );
+
+        // Quit
+        draw_text(
+            "ESC - Quit",
+            x + 10.0,
+            y + 70.0,
+            16.0,
+            WHITE,
+        );
     }
 
     fn get_player_color(player_id: u64) -> Color {
@@ -394,12 +438,12 @@ impl RenderManager {
         colors[(player_id as usize) % colors.len()]
     }
 
-    fn draw_start_page(&self, screen_width: f32, screen_height: f32) {
+    fn draw_start_page(&self, screen_width: f32, screen_height: f32, show_name_input: bool, player_name: &str) {
         // Draw semi-transparent overlay
         draw_rectangle(0.0, 0.0, screen_width, screen_height, Color::from_rgba(0, 0, 0, 200));
 
         // Draw title
-        let title = "BALL BALL U";
+        let title = "ECE1724::RUST::BALL BALL U";
         let title_size = 80.0;
         let title_dims = measure_text(title, None, title_size as u16, 1.0);
         let title_x = screen_width / 2.0 - title_dims.width / 2.0;
@@ -407,28 +451,96 @@ impl RenderManager {
         draw_text(title, title_x, title_y, title_size, Color::from_rgba(100, 255, 100, 255));
 
         // Draw subtitle
-        let subtitle = "A Multiplayer Agar.io Clone";
+        let subtitle = "University of Toronto";
         let subtitle_size = 30.0;
         let subtitle_dims = measure_text(subtitle, None, subtitle_size as u16, 1.0);
         let subtitle_x = screen_width / 2.0 - subtitle_dims.width / 2.0;
         let subtitle_y = title_y + 80.0;
         draw_text(subtitle, subtitle_x, subtitle_y, subtitle_size, Color::from_rgba(150, 150, 255, 255));
 
-        // Draw instructions
-        let instruction = "Press SPACE to Start";
-        let instruction_size = 40.0;
+        // Draw author information
+        let authors = vec![
+            "Litao(John) Zhou - 1006013092",
+            "Siyu Shao - 1007147204",
+            "Chuyue Zhang - 1005728303",
+        ];
+        let author_size = 20.0;
+        let author_y_start = subtitle_y + 60.0;
+        
+        for (i, author) in authors.iter().enumerate() {
+            let author_dims = measure_text(author, None, author_size as u16, 1.0);
+            let author_x = screen_width / 2.0 - author_dims.width / 2.0;
+            let author_y = author_y_start + (i as f32 * 25.0);
+            draw_text(author, author_x, author_y, author_size, Color::from_rgba(200, 200, 200, 255));
+        }
+
+        // Draw player name input box
+        if show_name_input {
+            let input_y = author_y_start + (authors.len() as f32 * 25.0) + 40.0;
+            
+            // Draw label
+            let label = "Enter Your Player Name (max 15 characters):";
+            let label_size = 20.0;
+            let label_dims = measure_text(label, None, label_size as u16, 1.0);
+            let label_x = screen_width / 2.0 - label_dims.width / 2.0;
+            draw_text(label, label_x, input_y, label_size, Color::from_rgba(200, 200, 200, 255));
+            
+            // Draw input box background
+            let box_width = 400.0;
+            let box_height = 40.0;
+            let box_x = screen_width / 2.0 - box_width / 2.0;
+            let box_y = input_y + 35.0;
+            draw_rectangle(box_x, box_y, box_width, box_height, Color::from_rgba(50, 50, 50, 255));
+            draw_rectangle_lines(box_x, box_y, box_width, box_height, 2.0, Color::from_rgba(200, 200, 200, 255));
+            
+            // Draw typed text
+            let text_size = 24.0;
+            draw_text(player_name, box_x + 10.0, box_y + 28.0, text_size, Color::from_rgba(255, 255, 255, 255));
+            
+            // Draw character count
+            let char_count_text = format!("{}/15", player_name.len());
+            let char_count_size = 16.0;
+            let char_count_dims = measure_text(&char_count_text, None, char_count_size as u16, 1.0);
+            let char_count_x = screen_width / 2.0 - char_count_dims.width / 2.0;
+            draw_text(&char_count_text, char_count_x, box_y + box_height + 25.0, char_count_size, Color::from_rgba(150, 150, 150, 255));
+        }
+
+        // Instruction text depends on whether name is empty or not
+        let instruction = if player_name.is_empty() {
+            "Press ENTER to start as Anonymous"
+        } else {
+            "Press ENTER to continue"
+        };
+
+        let instruction_size = 32.0;
         let instruction_dims = measure_text(instruction, None, instruction_size as u16, 1.0);
         let instruction_x = screen_width / 2.0 - instruction_dims.width / 2.0;
-        let instruction_y = screen_height / 2.0 + 60.0;
-        draw_text(instruction, instruction_x, instruction_y, instruction_size, Color::from_rgba(255, 200, 100, 255));
 
+        // Place instruction below input box (input box bottom = box_y + box_height)
+        let instruction_y = {
+            let authors_height = authors.len() as f32 * 25.0;
+            let input_y = author_y_start + authors_height + 40.0;
+            let box_y = input_y + 35.0;
+            box_y + 40.0 + 70.0  // box height + padding
+        };
+
+        draw_text(
+            instruction,
+            instruction_x,
+            instruction_y,
+            instruction_size,
+            Color::from_rgba(255, 200, 100, 255),
+        );
+
+        // (Removed controls from start page)
         // Draw controls hint
-        let controls = "Use WASD or Arrow Keys to move\nESC to quit";
-        let controls_size = 20.0;
-        let controls_y = screen_height - 80.0;
-        draw_text(controls, 20.0, controls_y, controls_size, Color::from_rgba(200, 200, 200, 200));
+        // let controls = "Use WASD or Arrow Keys to move\nESC to quit";
+        // let controls_size = 20.0;
+        // let controls_y = screen_height - 100.0;
+        // draw_text(controls, 20.0, controls_y, controls_size, Color::from_rgba(200, 200, 200, 200));
     }
 
+    // May not be used for argio style game
     fn draw_game_over_page(&self, screen_width: f32, screen_height: f32) {
         // Draw semi-transparent overlay
         draw_rectangle(0.0, 0.0, screen_width, screen_height, Color::from_rgba(0, 0, 0, 200));
@@ -442,7 +554,7 @@ impl RenderManager {
         draw_text(title, title_x, title_y, title_size, Color::from_rgba(255, 100, 100, 255));
 
         // Draw restart instruction
-        let restart = "Press SPACE to Return to Start";
+        let restart = "Press ENTER to Return to Start";
         let restart_size = 30.0;
         let restart_dims = measure_text(restart, None, restart_size as u16, 1.0);
         let restart_x = screen_width / 2.0 - restart_dims.width / 2.0;

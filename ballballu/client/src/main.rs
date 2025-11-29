@@ -14,7 +14,7 @@ use std::time::Instant;
 
 fn window_conf() -> Conf {
     Conf {
-        window_title: "Ball Ball U - Agar.io Clone".to_owned(),
+        window_title: "Ball Ball U".to_owned(),
         window_width: 1280,
         window_height: 720,
         window_resizable: true,
@@ -79,7 +79,7 @@ async fn main() {
     // +++Create tokio runtime manually (macroquad does NOT supply a reactor)
     let rt = Runtime::new().expect("Failed to create Tokio runtime");
 
-    let url = "ws://127.0.0.1:8000";
+    let url = "ws://128.100.8.107:34568";
     
     // Initialize render manager with default world size
     // These should match server's world size
@@ -201,7 +201,10 @@ async fn main() {
     let mut connection_lost = false;
     let mut frames_without_update = 0;
     let mut player_id: Option<u64> = None;
-    let mut client_ready = false;  // Track if this client has pressed space
+    let mut client_ready = false;  // Track if this client has pressed enter
+    let mut player_name = String::new();  // Player name input
+    let mut name_submitted = false;  // Track if name has been submitted
+    let mut join_time: Option<Instant> = None;  // Track when this client joined the game
 
     loop {
         // Check for shutdown signal (non-blocking)
@@ -210,17 +213,80 @@ async fn main() {
             should_exit = true;
         }
 
-        // Poll for keyboard input (one-click movement). We pass the local
-        // player's radius so the client can compute step distance.
-        let player_radius = latest_snapshot
-            .as_ref()
-            .and_then(|s| s.snapshot.players.first().map(|p| p.radius));
-        let (should_exit_input, space_pressed) = input_manager.poll_input(player_radius);
-        if should_exit_input {
-            should_exit = true;
-        }
-        if space_pressed {
-            client_ready = true;
+        // Handle text input for player name on start screen
+        if !name_submitted {
+            // Check for backspace
+            if is_key_pressed(KeyCode::Backspace) {
+                if !player_name.is_empty() {
+                    player_name.pop();
+                }
+            }
+            
+            // Check for enter
+            if is_key_pressed(KeyCode::Enter) {
+                name_submitted = true;
+                client_ready = true;
+                join_time = Some(Instant::now());  // Record join time when player presses ENTER
+                let _ = input_tx.send(ClientMessage::Join { name: player_name.clone() });
+                let _ = input_tx.send(ClientMessage::Ready);
+            }
+            
+            // Handle alphanumeric and space input
+            if let Some(key) = get_last_key_pressed() {
+                if player_name.len() < 15 {
+                    match key {
+                        KeyCode::A => player_name.push('A'),
+                        KeyCode::B => player_name.push('B'),
+                        KeyCode::C => player_name.push('C'),
+                        KeyCode::D => player_name.push('D'),
+                        KeyCode::E => player_name.push('E'),
+                        KeyCode::F => player_name.push('F'),
+                        KeyCode::G => player_name.push('G'),
+                        KeyCode::H => player_name.push('H'),
+                        KeyCode::I => player_name.push('I'),
+                        KeyCode::J => player_name.push('J'),
+                        KeyCode::K => player_name.push('K'),
+                        KeyCode::L => player_name.push('L'),
+                        KeyCode::M => player_name.push('M'),
+                        KeyCode::N => player_name.push('N'),
+                        KeyCode::O => player_name.push('O'),
+                        KeyCode::P => player_name.push('P'),
+                        KeyCode::Q => player_name.push('Q'),
+                        KeyCode::R => player_name.push('R'),
+                        KeyCode::S => player_name.push('S'),
+                        KeyCode::T => player_name.push('T'),
+                        KeyCode::U => player_name.push('U'),
+                        KeyCode::V => player_name.push('V'),
+                        KeyCode::W => player_name.push('W'),
+                        KeyCode::X => player_name.push('X'),
+                        KeyCode::Y => player_name.push('Y'),
+                        KeyCode::Z => player_name.push('Z'),
+                        KeyCode::Key0 => player_name.push('0'),
+                        KeyCode::Key1 => player_name.push('1'),
+                        KeyCode::Key2 => player_name.push('2'),
+                        KeyCode::Key3 => player_name.push('3'),
+                        KeyCode::Key4 => player_name.push('4'),
+                        KeyCode::Key5 => player_name.push('5'),
+                        KeyCode::Key6 => player_name.push('6'),
+                        KeyCode::Key7 => player_name.push('7'),
+                        KeyCode::Key8 => player_name.push('8'),
+                        KeyCode::Key9 => player_name.push('9'),
+                        KeyCode::Space => player_name.push(' '),
+                        KeyCode::Minus => player_name.push('_'),
+                        _ => {}
+                    }
+                }
+            }
+        } else {
+            // Poll for keyboard input (one-click movement). We pass the local
+            // player's radius so the client can compute step distance.
+            let player_radius = latest_snapshot
+                .as_ref()
+                .and_then(|s| s.snapshot.players.first().map(|p| p.radius));
+            let (should_exit_input, _enter_pressed) = input_manager.poll_input(player_radius);
+            if should_exit_input {
+                should_exit = true;
+            }
         }
 
         // Try to receive player_id (non-blocking)
@@ -243,7 +309,7 @@ async fn main() {
 
         // Render the game
         if let Some(ref snap) = latest_snapshot {
-            render_manager.render(&snap.snapshot, snap.received_at, player_id, client_ready);
+            render_manager.render(&snap.snapshot, snap.received_at, player_id, client_ready, !name_submitted, &player_name, join_time);
             
             // Show warning if no updates for a while
             if frames_without_update > 120 {

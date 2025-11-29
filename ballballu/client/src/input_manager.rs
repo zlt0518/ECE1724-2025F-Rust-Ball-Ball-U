@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use macroquad::prelude::{is_key_pressed, KeyCode};
+use macroquad::prelude::{is_key_pressed,is_key_down, KeyCode};
 use shared::protocol::ClientMessage;
 use tokio::sync::mpsc;
 
@@ -14,10 +14,10 @@ impl InputManager {
 
     /// Poll for keyboard input and send a single-step Move to the server.
     /// `player_radius` is used to scale the step distance; if `None`, a default
-    /// base distance is used. Returns (should_exit, space_pressed).
+    /// base distance is used. Returns (should_exit, enter_pressed).
     pub fn poll_input(&self, player_radius: Option<f32>) -> (bool, bool) {
-        // Space to send Ready message
-        if is_key_pressed(KeyCode::Space) {
+        // Enter to send Ready message
+        if is_key_pressed(KeyCode::Enter) {
             let _ = self.input_tx.send(ClientMessage::Ready);
             return (false, true);
         }
@@ -26,20 +26,20 @@ impl InputManager {
         let mut dy = 0.0f32;
         let mut has_press = false;
 
-        // Use key *press* (one-click) for discrete movement
-        if is_key_pressed(KeyCode::W) || is_key_pressed(KeyCode::Up) {
+        // Use key down for discrete movement
+        if is_key_down(KeyCode::W) || is_key_down(KeyCode::Up) {
             dy -= 1.0;
             has_press = true;
         }
-        if is_key_pressed(KeyCode::S) || is_key_pressed(KeyCode::Down) {
+        if is_key_down(KeyCode::S) || is_key_down(KeyCode::Down) {
             dy += 1.0;
             has_press = true;
         }
-        if is_key_pressed(KeyCode::A) || is_key_pressed(KeyCode::Left) {
+        if is_key_down(KeyCode::A) || is_key_down(KeyCode::Left) {
             dx -= 1.0;
             has_press = true;
         }
-        if is_key_pressed(KeyCode::D) || is_key_pressed(KeyCode::Right) {
+        if is_key_down(KeyCode::D) || is_key_down(KeyCode::Right) {
             dx += 1.0;
             has_press = true;
         }
