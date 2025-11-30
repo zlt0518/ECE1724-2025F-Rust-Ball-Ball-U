@@ -96,7 +96,7 @@ impl WebSocketManager {
                     }
                 });
 
-                // 1. 分配 player id
+                // 1. Assign player id
                 let mut id_guard = id_counter.lock().await;
                 let id = *id_guard;
                 *id_guard += 1;
@@ -104,7 +104,7 @@ impl WebSocketManager {
 
                 println!("Player {} connected!", id);
 
-                // 2. 加入 GameState
+                // 2. Add GameState
                 gs_state.lock().await.add_player(id);
 
                 // Phase 3: Register connection for broadcasting
@@ -134,8 +134,8 @@ impl WebSocketManager {
                     }
                 }
 
-                // 3. 读消息
-                //    无论是 Close 还是错误，最后都会执行 remove_player
+                // 3. Read Message
+                // No matter Close or Error, remove player eventually
                 while let Some(msg_result) = ws_rx.next().await {
                     match msg_result {
                         Ok(Message::Text(txt)) => {
@@ -176,7 +176,7 @@ impl WebSocketManager {
                     }
                 }
 
-                // 4. 无论如何，最终从 GameState 移除
+                // 4. Remove Player from GameState
                 println!("Cleaning up player {} from GameState", id);
                 gs_state.lock().await.remove_player(id);
                 connections.lock().await.remove(&id);
