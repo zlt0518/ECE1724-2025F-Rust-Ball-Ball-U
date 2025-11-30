@@ -1,12 +1,8 @@
 use serde::{Serialize, Deserialize};
 use crate::{GameConstant, GameSnapshot};
 
-//
-// ===============================
-//      Client → Server Messages
-// ===============================
-//
 
+/// Client → Server Messages
 /// Client input command (WASD)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserInput {
@@ -35,12 +31,7 @@ pub enum ClientMessage {
 }
 
 
-//
-// ===============================
-//      Server → Client Messages
-// ===============================
-//
-
+/// Server → Client Messages
 /// Sent to client immediately after connection accepted
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WelcomeMessage {

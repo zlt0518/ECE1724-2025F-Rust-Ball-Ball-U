@@ -6,10 +6,7 @@ fn distance(x1: f32, y1: f32, x2: f32, y2: f32) -> f32 {
 }
 
 
-// =============================================
-// 1. cellsCollisionsCheck: player-player collision?
-// =============================================
-
+/// CellsCollisionsCheck: player-player collision
 /// Returns true if two players' circles overlap
 pub fn cells_collisions_check(a: &PlayerSpec, b: &PlayerSpec) -> bool {
     let d = distance(a.x, a.y, b.x, b.y);
@@ -17,10 +14,7 @@ pub fn cells_collisions_check(a: &PlayerSpec, b: &PlayerSpec) -> bool {
 }
 
 
-// =============================================
-// 2. dotCollisionCheck: player eats dot?
-// =============================================
-
+/// DotCollisionCheck: player eats dot
 /// Returns true if player overlaps with the dot
 pub fn dot_collision_check(player: &PlayerSpec, dot: &Dot) -> bool {
     let d = distance(player.x, player.y, dot.x, dot.y);
@@ -28,10 +22,7 @@ pub fn dot_collision_check(player: &PlayerSpec, dot: &Dot) -> bool {
 }
 
 
-// =============================================
-// 3. calculateSpeedFromScore
-// =============================================
-
+/// CalculateSpeedFromScore
 /// Speed decreases slowly as player grows larger.
 /// At score 0 => base_speed
 /// Larger mass => slightly slower movement
@@ -41,20 +32,14 @@ pub fn calculate_speed_from_score(score: u32, base_speed: f32) -> f32 {
 }
 
 
-// =============================================
-// 4. calculateRadiusFromScore
-// =============================================
-
+/// CalculateRadiusFromScore
 /// Radius grows as sqrt(score), typical agar.io mechanic.
 pub fn calculate_radius_from_score(score: u32, base_radius: f32) -> f32 {
     base_radius + (score as f32).sqrt()
 }
 
 
-// =============================================
-// 5. updatePosition: update player movement
-// =============================================
-
+/// UpdatePosition: update player movement
 /// Moves a player with discrete distance-based movement.
 /// Consumes remaining_distance each frame and stops when complete.
 pub fn update_position(
@@ -95,10 +80,7 @@ pub fn update_position(
 }
 
 
-// =============================================
-// 6. consumeCalculation: size updates after consuming
-// =============================================
-
+/// ConsumeCalculation: size updates after consuming
 /// When big_player eats small_player:
 /// - new score = sum
 /// - new radius = recalculated from score

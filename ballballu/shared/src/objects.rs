@@ -1,9 +1,5 @@
 use serde::{Serialize, Deserialize};
 
-// ==========================
-//  Player + Dot Structures
-// ==========================
-
 /// Player state sent between server and clients
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerSpec {

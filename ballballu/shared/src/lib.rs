@@ -5,10 +5,8 @@ pub mod mechanics;
 pub mod protocol;
 pub mod objects;
 
-// ==========================
-//      Game Status
-// ==========================
 
+/// Game Status Enum
 /// Current state of the game
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum GameStatus {
@@ -17,10 +15,7 @@ pub enum GameStatus {
     GameOver,        // Game has ended
 }
 
-// ==========================
-//      Game Constants
-// ==========================
-
+/// Game Constants
 /// Core game constants used by both client and server
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameConstant {
@@ -31,12 +26,8 @@ pub struct GameConstant {
 }
 
 
-// ==========================
-//       Game Snapshot
-// ==========================
-
+/// Game Snapshot
 /// Snapshot of game world sent from server → client every tick
-///
 /// Server sends:
 ///    - current state of all players
 ///    - all dots
