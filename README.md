@@ -76,10 +76,6 @@ A deterministic **20 Hz tick loop (50ms)** enforces all game mechanics, includin
 - Incoming packets (`ClientMessage`) are deserialized and queued asynchronously.
 - Messages are processed *only during the next tick* to preserve order and fairness.
 
-#### **Integrated HTTP Server**
-- Runs concurrently with the WebSocket server using **hyper**.
-- Serves static assets (HTML, JS, CSS) needed by the web client.
-
 ### 2. High-Performance Client
 
 #### **Reactive Rendering Engine**
@@ -132,7 +128,7 @@ Using **serde** and **serde_json**.
 
 ## User’s and Developer’s Guide
 
-This project is organized into a Rust workspace containing three crates: **server**, **client**, and **shared**.
+This project is organised into a Rust workspace containing three crates: **server**, **client**, and **shared**.
 
   * **Shared:** Defines the "source of truth"—protocol messages, game objects (Players, Dots), and physics mechanics.
   * **Server:** Runs the authoritative game simulation, manages WebSocket connections via `tokio-tungstenite`, and serves static files via `hyper`.
