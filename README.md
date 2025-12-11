@@ -286,21 +286,25 @@ async fn main() {
 ## Reproducibility Guide
 
 To reproduce the build and run the project exactly as intended, follow these steps with no deviation.
-These instructions work on both Ubuntu Linux and macOS Sonoma.
+These instructions work on both Ubuntu Linux and MacOS.
 
 ### 0. Install Rust
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-### 1. Build the entire workspace
+### 1. Enter the project workspace
+```bash
+cd ballballu
+```
+
+### 2. Build the entire workspace
 ```bash
 cargo build
 ```
 This compiles all three crates: server, client, and shared.
 
-### 1.1. Network ports configuration
-
+### 2.1. (Important): Network ports configuration
 **The server process opens two TCP ports:**
 - An HTTP server for static assets (HTML/JS/CSS) on port <34567>.
 - A WebSocket game server for real-time gameplay on port <34568>.
@@ -309,13 +313,13 @@ This compiles all three crates: server, client, and shared.
 - Make sure these two ports (<34567>, <34568>) are not already in use on the machine where you run the server.
 - If there is a firewall, allow incoming TCP connections on these ports (at least from the machine running the client).
 
-### 2. Run the server
+### 3. Run the server
 ```bash
 cargo run -p server
 ```
 The server will start listening for WebSocket connections and begin running the game loop.
 
-### 2.1. (Optional): Connect From Another Machine Using SSH
+### 3.1. (Optional): Connect From Another Machine Using SSH
 
 If you want to run the server on one machine and the client on another:
 
@@ -335,7 +339,7 @@ ssh username@SERVER_IP_ADDRESS
 
 After connecting, you can run the server or client normally on that machine.
 
-### 3. Run the client
+### 4. Run the client
 
 Open a second terminal window (or use a second machine via SSH) and run:
 ```bash
@@ -345,7 +349,7 @@ cargo run -p client
 The client will automatically connect to the server’s WebSocket endpoint and begin rendering the game.
 **You may open multiple client instances (each in its own terminal or via SSH), and as long as they are connected to the same server address, all clients will join the same game world and play together**
 
-### 4. Controls and UI
+### 5. Controls and UI
 
 #### When the client window opens:
 - Use [W][A][S][D] or the Arrow Keys to move your ball.
