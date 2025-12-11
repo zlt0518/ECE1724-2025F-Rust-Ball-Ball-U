@@ -14,7 +14,7 @@ ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems 
 ## Presentation and Demo
 **Slide Link:** TBA!!!! \
 **Presentation Link:** TBA!!!! \
-**Demo Link:** TBA!!!! \
+**Demo Link:** TBA!!!! 
 
 ## Introduction 
 
@@ -29,74 +29,13 @@ Our project **Ball Ball U** is inspired by both games, but shifts the focus from
 
 We chose Rust because its performance, concurrency model, and memory safety make it well-suited for building a reliable real-time PvP multiplayer game. Although Rust has many existing resources for game development and for backend servers, there are very few complete examples that combine the two into a real-time multiplayer system. Our project helps fill this gap by showing how to connect a Rust game engine with an asynchronous server runtime, providing a clear reference for developers interested in building multiplayer games in Rust.
 
-## Objective and key features
-
-### Objective
+## Objective
 
 The primary objective of this project is to design and implement a complete, end-to-end, real-time multiplayer game using a pure Rust technology stack.
 
 Inspired by popular titles like Agar.io and Battle of Life, the primary goal is to create a clean, reusable, and well-documented architectural blueprint for client-server interaction within the Rust game development environment.
 
 Our goal is to develop a high-performance, concurrent, and memory-safe multiplayer game server entirely in Rust. This real-time PvP project would include features such as rapid synchronization, consistent state, and low-latency scaling. To support this, we refine mechanics like collision detection, growth rules, and movement dynamics, ensuring fair and engaging encounters.
-
-### Key Features
-
-To achieve our objective, the project will be built around three core pillars: a centralized server, a responsive client, and a well-defined set of gameplay mechanics.
-
-### Server
-
-The server is the single source of truth for all game logic and state. It serves as the backend of the project. It has the following features:
-
- - Game state management: It manages the position, size, and velocity of all game objects, including all players and items in the game scene. 
- - Player input processing: It manages a dynamic list of WebSocket connections to each client. It receives and validates player actions sent from multiple clients via WebSockets. It would also resolve all the time sequential conflicts centrally.
- - Game mechanics engine: It continuously updates the game state in a fixed-tick loop, applying the core game mechanics at each step.
- - State Synchronization: It broadcasts a snapshot of the current game state to all clients at a regular interval.
-
-The server would use Tokio Async Runtime as the core tech stack, and use the [Tokio-tungstenite][Tokio-tungstenite] to implement the WebSockets. 
-
-### Client
-
-The client is responsible for rendering the state received from the server and capturing the user input. It serves as the frontend of the project. It has the following features:
-
- - Graphics rendering: It utilizes the Bevy Engine to manage the game camera and render all the game objects on screen efficiently.
- - Server communication: It establishes a persistent [WebSocket][WebSocket] connection to the server to send player inputs and receive game state updates.
- - Input handling: It captures keyboard inputs and translates them into serialized messages for the server. To ensure responsive controls and hide network latency, the client would immediately act on keyboard inputs, providing immediate visual feedback. Meanwhile, the inputs are sent to the server for validation and processing.
- - User interface: It displays game information to the player, such as a real-time leaderboard and the names floating above each player's cell.
-
-### Shared Game Mechanics Library
-
-The shared game mechanics library is used to model the game objects and define the game mechanics in the game. The features include:
-
- - Game objects
-   - Player cells: Each player controls a cell that contains a specific name, color, score, size, and speed.
-   - Dots: These are small, static circles that spawn randomly on the map. Consuming them increases a player's score.
-   - Game space: The game takes place within a large, rectangular area with defined boundaries.
- - Game mechanics:
-   - When a player's cell collides with a dot, the dot is consumed, and its score is added to the player's score.
-   - When a player's cell collides with another player's cell, the player with the higher score consumes the one with the lower score. The winner's score increases by the loser's score.
-   - The size of the player is proportional to the score of the player.
-   - The speed of the player is inversely proportional to the score of the player.
-   - When a player is consumed, they are presented with an option to either rejoin the game or quit.
- - Serialization: For the data serialization during the message transmission, we would use [Serde][Serde] to do it. 
- - Communication protocol: We would define all the messages, including client messages and server messages, in the protocol here.
-
-<div align="center">
-  <p>
-    <img src="documentations/images/ece1724_architecture.drawio.png" alt="architecture_diagram" width="70%">
-  </p>
-  <p>
-    <em> Figure 1. Project Architecture Diagram </em>
-  </p>
-</div>
-
-<div align="center">
-  <p>
-    <img src="documentations/images/ece1724_sequence_diagram.drawio.png" alt="sequence_diagram" width="70%">
-  </p>
-  <p>
-    <em> Figure 2. Project Sequence Diagram </em>
-  </p>
-</div>
 
 ## Feature
 The final deliverable of **Ball Ball U** is a real-time, multiplayer online game built entirely in **Rust**, utilising a **client–server architecture**.  
@@ -170,57 +109,180 @@ Using **serde** and **serde_json**.
 - Broadcasts via Tx channels to all connected clients.
 - Ensures every player receives a synchronised world state.
 
-## User’s (or Developer’s) Guide
+<div align="center">
+  <p>
+    <img src="documentations/images/ece1724_final_architecture.png" alt="architecture_diagram" width="70%">
+  </p>
+  <p>
+    <em> Figure 1. Project Architecture Diagram </em>
+  </p>
+</div>
 
-This project consists of three Rust crates: **server**, **client**, and **shared**.  
-- The shared crate defines all protocol messages, game objects, and mechanics.  
-- The server crate provides the authoritative game simulation and networking
-- The client crate provides rendering and input handling.
+<div align="center">
+  <p>
+    <img src="documentations/images/ece1724_final_flow_diagram.png" alt="sequence_diagram" width="70%">
+  </p>
+  <p>
+    <em> Figure 2. Project Flow Diagram </em>
+  </p>
+</div>
 
-To use the crates in your own Rust project, include them in your workspace’s `Cargo.toml`:
+## User’s and Developer’s Guide
+
+This project is organized into a Rust workspace containing three crates: **server**, **client**, and **shared**.
+
+  * **Shared:** Defines the "source of truth"—protocol messages, game objects (Players, Dots), and physics mechanics.
+  * **Server:** Runs the authoritative game simulation, manages WebSocket connections via `tokio-tungstenite`, and serves static files via `hyper`.
+  * **Client:** Handles the game loop using `macroquad` for rendering and `tokio` for asynchronous network communication.
+
+### 0\. Workspace Setup
+
+To develop or extend this project, ensure your workspace `Cargo.toml` includes all three members:
 
 ```toml
 [workspace]
 members = ["server", "client", "shared"]
+resolver = "2"
 ```
 
-Example usage of the **shared** crate types:
+-----
+
+### 1\. Using the Shared Crate
+
+**Target Audience:** Developers adding new game mechanics or packet types.
+
+The **shared** crate contains the data structures that must remain consistent across the network.
+
+**Example: Creating Protocol Messages and Game Constants**
 
 ```rust
 extern crate shared;
-
-use shared::protocol::{ClientMessage, ServerMessage};
+use shared::protocol::{ClientMessage, UserInput};
+use shared::GameConstant;
 
 fn main() {
-    let msg = ClientMessage::Hello;
-    println!("Client message created: {:?}", msg);
+    // 1. Create a Join message (sent when client connects)
+    let join_msg = ClientMessage::Join {
+        name: "PlayerOne".to_string(),
+    };
+    
+    // 2. Create a Move message (sent when player presses keys)
+    let move_msg = ClientMessage::Move {
+        dx: 1.0,
+        dy: 0.0,
+        distance: 5.0,
+    };
+
+    println!("Serialized Protocol Message: {:?}", serde_json::to_string(&join_msg));
+    
+    // 3. Define Game Constants (used for physics calculations)
+    let constants = GameConstant {
+        tick_interval_ms: 50,
+        collide_size_fraction: 1.1,
+        move_speed_base: 150.0,
+        dot_radius: 5.0,
+    };
 }
 ```
 
-Example usage of the **server** crate’s game loop module:
+-----
+
+### 2\. Using the Server Crate
+
+**Target Audience:** Developers modifying the backend architecture or hosting the game.
+
+The **server** crate uses the Tokio runtime. It requires initializing the `WebSocketManager` (which holds the game state) and the `GameLoop` (which processes physics).
+
+**Example: Initializing and Running the Server**
 
 ```rust
 extern crate server;
+use std::sync::Arc;
+use std::path::PathBuf;
+use server::websocket_manager::WebSocketManager;
+use server::game_loop::GameLoop;
+use server::http_server::HttpServer;
 
-fn main() {
-    println!("Starting server game loop...");
-    server::game_loop::start_game_loop();
+#[tokio::main]
+async fn main() {
+    // 1. Initialize the WebSocket Manager (handles game state & connections)
+    // Note: Bind to 0.0.0.0 to allow external connections
+    let ws_manager = Arc::new(WebSocketManager::new("0.0.0.0:34568").await);
+
+    // 2. Initialize the Game Loop (physics engine)
+    let game_loop = GameLoop::new(ws_manager.clone());
+
+    // 3. Initialize HTTP Server for static assets (HTML/JS)
+    let static_path = PathBuf::from("static");
+    let http_server = HttpServer::new("0.0.0.0:34567", static_path);
+
+    // 4. Spawn non-blocking tasks
+    let ws_clone = ws_manager.clone();
+    tokio::spawn(async move {
+        ws_clone.run_accept_loop().await;
+    });
+
+    tokio::spawn(async move {
+        http_server.run().await;
+    });
+
+    println!("Server started. Game loop running...");
+    
+    // 5. Run the authoritative game loop (this blocks the main thread)
+    game_loop.run().await;
 }
 ```
 
-Example usage of the **client** crate:
+-----
+
+### 3\. Using the Client Crate
+
+**Target Audience:** Developers working on rendering, input handling, or UI.
+
+The **client** crate uses the `macroquad` framework. Unlike standard Rust binaries, the main function is decorated with `#[macroquad::main]`.
+
+**Example: Client Entry Point Structure**
 
 ```rust
 extern crate client;
+use macroquad::prelude::*;
+// Note: Actual implementation requires modules defined in client/src/
+// This snippet illustrates the architectural flow.
 
-fn main() {
-    println!("Launching client...");
-    client::start_client();
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Ball Ball U".to_string(),
+        window_width: 1280,
+        window_height: 720,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
+async fn main() {
+    // 1. Setup Async Runtime for networking
+    let rt = tokio::runtime::Runtime::new().unwrap();
+
+    // 2. Initialize Managers
+    // (In actual code: RenderManager::new, InputManager::new)
+    
+    // 3. Connect via WebSocket
+    let url = "ws://127.0.0.1:34568";
+    println!("Connecting to {}...", url);
+
+    // 4. Main Game Loop (60 FPS default)
+    loop {
+        // A. Capture Input (WASD / ESC)
+        // input_manager.poll_input(...);
+
+        // B. Render Game World based on latest Server Snapshot
+        // render_manager.render(snapshot, ...);
+
+        // C. Wait for next frame
+        next_frame().await;
+    }
 }
 ```
-
-
-
 
 ## Reproducibility Guide
 
