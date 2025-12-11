@@ -37,9 +37,28 @@ Inspired by popular titles like Agar.io and Battle of Life, the primary goal is 
 
 Our goal is to develop a high-performance, concurrent, and memory-safe multiplayer game server entirely in Rust. This real-time PvP project would include features such as rapid synchronization, consistent state, and low-latency scaling. To support this, we refine mechanics like collision detection, growth rules, and movement dynamics, ensuring fair and engaging encounters.
 
-## Feature
+## Features
 The final deliverable of **Ball Ball U** is a real-time, multiplayer online game built entirely in **Rust**, utilising a **client–server architecture**.  
 The main features are broken down as follows:
+
+<div align="center">
+  <p>
+    <img src="documentations/images/ece1724_final_architecture.png" alt="architecture_diagram" width="70%">
+  </p>
+  <p>
+    <em> Figure 1. Project Architecture Diagram </em>
+  </p>
+</div>
+
+<div align="center">
+  <p>
+    <img src="documentations/images/ece1724_final_flow_diagram.png" alt="sequence_diagram" width="70%">
+  </p>
+  <p>
+    <em> Figure 2. Project Flow Diagram </em>
+  </p>
+</div>
+
 ### 1. Robust Server Architecture
 #### **Asynchronous Concurrency**
 - Built on the **tokio** runtime and **tokio-tungstenite**.
@@ -71,7 +90,7 @@ Uses **macroquad** to render at **60 FPS**, drawing:
 
 #### **Dynamic Camera System**
 - Smooth camera tracking centred on the local player.
-- Automatically adjusts viewport as the player moves.
+- Automatically adjusts the viewport as the player moves.
 
 #### **Input Management**
 - Captures WASD/Arrow key movement, ESC (quit), Enter (ready).
@@ -109,23 +128,7 @@ Using **serde** and **serde_json**.
 - Broadcasts via Tx channels to all connected clients.
 - Ensures every player receives a synchronised world state.
 
-<div align="center">
-  <p>
-    <img src="documentations/images/ece1724_final_architecture.png" alt="architecture_diagram" width="70%">
-  </p>
-  <p>
-    <em> Figure 1. Project Architecture Diagram </em>
-  </p>
-</div>
 
-<div align="center">
-  <p>
-    <img src="documentations/images/ece1724_final_flow_diagram.png" alt="sequence_diagram" width="70%">
-  </p>
-  <p>
-    <em> Figure 2. Project Flow Diagram </em>
-  </p>
-</div>
 
 ## User’s and Developer’s Guide
 
@@ -300,7 +303,7 @@ cargo build
 ```
 This compiles all three crates: server, client, and shared.
 
-### 1.5 Network ports configuration
+### 1.1. Network ports configuration
 
 **The server process opens two TCP ports:**
 - An HTTP server for static assets (HTML/JS/CSS) on port <34567>.
@@ -316,7 +319,7 @@ cargo run -p server
 ```
 The server will start listening for WebSocket connections and begin running the game loop.
 
-### 2.5 (Optional): Connect From Another Machine Using SSH
+### 2.1. (Optional): Connect From Another Machine Using SSH
 
 If you want to run the server on one machine and the client on another:
 
@@ -349,23 +352,24 @@ The client will automatically connect to the server’s WebSocket endpoint and b
 ### 4. Controls and UI
 
 #### When the client window opens:
-- Use WASD or the Arrow Keys to move your ball.
+- Use [W][A][S][D] or the Arrow Keys to move your ball.
 - Keyboard input player nickname.
-- Press Enter to mark yourself as ready / start the game.
-- Press Esc to quit the client.
+- Press [Enter] to mark yourself as ready / start the game.
+- Press [Esc] to quit the client.
 
 #### The client shows:
-- Your own ball (with a unique colour and name),
-- Other players’ balls,
-- Food dots,
+- Your own ball (with a unique colour and name).
+- Other players’ balls.
+- Food dots.
 - Basic UI overlays, such as a timer and scores.
 
 
 ## Contributions by each team member
-### Siyu Shao: 
-### Litao(John) Zhou:
-### Chuyue Zhang: 
+### Siyu Shao
 
+### Litao(John) Zhou
+
+### Chuyue Zhang
 
 ## Lesson Learned
 Working on Ball Ball U let us use Rust in a way that is very different from small homework problems. We had to keep an authoritative game server, a shared-protocol crate, and a real-time client working together. Through this process, we became more comfortable with Rust’s ownership rules, async/await, and WebSocket networking, and we saw how these tools can be combined to support a fast PvP game.
