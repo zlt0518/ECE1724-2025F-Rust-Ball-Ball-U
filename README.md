@@ -368,8 +368,20 @@ The client will automatically connect to the server’s WebSocket endpoint and b
 ### Siyu Shao
 
 ### Litao(John) Zhou
+- Implemented shared game mechanism library;
+- Implemented client skeleton and established communication with server;
+- Implemented start page and type naming feature;
+- Implemented timer for client;
+- Debugging and Testing;
+- Wrote presentation and report.
 
 ### Chuyue Zhang
+- Designed system architecture;
+- Implemented server;
+- Integrated Macroquad to the client;
+- Implemented the mechanism to generate players at random places and generate different types of dots during the game;
+- Debugging and Testing;
+- Wrote presentation and report.
 
 ## Lesson Learned
 Working on Ball Ball U let us use Rust in a way that is very different from small homework problems. We had to keep an authoritative game server, a shared-protocol crate, and a real-time client working together. Through this process, we became more comfortable with Rust’s ownership rules, async/await, and WebSocket networking, and we saw how these tools can be combined to support a fast PvP game.
