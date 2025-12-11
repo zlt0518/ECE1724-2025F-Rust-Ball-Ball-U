@@ -384,11 +384,11 @@ The client will automatically connect to the server’s WebSocket endpoint and b
 - Wrote presentation and report.
 
 ## Lesson Learned
-Working on Ball Ball U let us use Rust in a way that is very different from small homework problems. We had to keep an authoritative game server, a shared-protocol crate, and a real-time client working together. Through this process, we became more comfortable with Rust’s ownership rules, async/await, and WebSocket networking, and we saw how these tools can be combined to support a fast PvP game.
+Working on **Ball Ball U** let us use Rust in a way that is very different from small homework problems. We had to keep an authoritative game server, a shared-protocol crate, and a real-time client working together. Through this process, we became more comfortable with Rust’s ownership rules, async/await, and WebSocket networking, and we saw how these tools can be combined to support a fast PvP game.
 
 At the same time, the project also showed us several things we would do differently next time. Early on, we spent a lot of time exploring text-based rendering, and only later switched fully to a graphical engine. If we had made this decision earlier, we could have put more effort into gameplay polish and user experience. On the server side, some modules became more complex than we expected, and we learned that agreeing on clear boundaries between networking, game logic, and state management at the design stage would make later changes much easier.
 
-Overall, this project has been a very positive learning experience for our team, both technically and in how we plan and divide work in a longer project. We now have a working real-time multiplayer game written entirely in Rust, with an authoritative server, a graphical client, and a shared protocol that keeps them in sync. We feel that Ball Ball U adds a small but useful example to the Rust ecosystem for developers who want to build real-time multiplayer games and are looking for an end-to-end reference.
+Overall, this project has been a very positive learning experience for our team, both technically and in how we planed and divided work in a longer project. We now have a working real-time multiplayer game written entirely in Rust, with an authoritative server, a graphical client, and a shared protocol that keeps them in synchronization. We believe this project makes a meaningful contribution to the Rust community by providing a concrete blueprint for full-stack, real-time game architecture.
 
 ## Conclusion
 
