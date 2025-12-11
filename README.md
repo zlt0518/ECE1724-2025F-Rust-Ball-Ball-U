@@ -378,6 +378,10 @@ At the same time, the project also showed us several things we would do differen
 
 Overall, this project has been a very positive learning experience for our team, both technically and in how we plan and divide work in a longer project. We now have a working real-time multiplayer game written entirely in Rust, with an authoritative server, a graphical client, and a shared protocol that keeps them in sync. We feel that Ball Ball U adds a small but useful example to the Rust ecosystem for developers who want to build real-time multiplayer games and are looking for an end-to-end reference.
 
+## Conclusion
+
+In conclusion, **Ball Ball U** successfully demonstrates the power of Rust in building a performant, real-time multiplayer game by effectively bridging an authoritative `tokio` server with a `macroquad` client. This project not only delivers a complete PvP experience but also serves as a valuable architectural reference for developers exploring safe concurrency and real-time networking in the Rust ecosystem.
+
 [course_page]: https://www.eecg.toronto.edu/~bli/ece1724
 [home_page]: https://github.com/zlt0518/ECE1724-2025F-Rust-Ball-Ball-U
 [battle_of_balls]: https://www.battleofballs.com
