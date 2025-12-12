@@ -99,7 +99,7 @@ Client loop:
 
 <div align="center">
   <p>
-    <img src="documentations/images/ece1724_Client Interface Screenshot" alt="Client Interface Screenshot" width="70%">
+    <img src="documentations/images/ece1724_Client Interface Screenshot.jpg" alt="Client Interface Screenshot" width="70%">
   </p>
   <p>
     <em> Figure 3. Client Interface Screenshot </em>
@@ -135,7 +135,7 @@ Using **serde** and **serde_json**.
 
 <div align="center">
   <p>
-    <img src="documentations/images/ece1724_2 Clients have the same leaderboard status screenshot" alt="Leaderboard Data Consistency Screenshot" width="70%">
+    <img src="documentations/images/ece1724_2 Clients have the same leaderboard status screenshot.jpg" alt="Leaderboard Data Consistency Screenshot" width="70%">
   </p>
   <p>
     <em> Figure 4. 2 Clients have the same leaderboard status screenshot </em>
