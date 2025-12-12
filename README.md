@@ -382,6 +382,12 @@ The client will automatically connect to the server’s WebSocket endpoint and b
 
 ## Contributions by each team member
 ### Siyu Shao
+- Implemented input handling and player movement logic in the macroquad client (WASD/Arrow keys, key-down based control, speed scaling with ball size);
+- Implemented anonymous user mode with random player naming on the client;
+- Implemented and refined client-side leaderboard and control panel UI;
+- Implemented and refined client WebSocket handling, including automatic disconnection when the server is killed;
+- Debugging and Testing;
+- Wrote presentation and report.
 
 ### Litao(John) Zhou
 - Implemented shared game mechanism library;
