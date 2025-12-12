@@ -1,7 +1,7 @@
 # ECE1724-F1-2025F-Rust-Ball-Ball-U
 ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems with Rust 2025 Fall Project
 
-**Course Link:** [ECE1724 F1: Special Topics in Software Systems: Performant Software Systems with Rust][course_page] \
+**Course Link:** [Performant Software Systems with Rust][course_page] \
 **Project Link:** [BALL BALL U - Home Page][home_page]
 
 ## Team Members
