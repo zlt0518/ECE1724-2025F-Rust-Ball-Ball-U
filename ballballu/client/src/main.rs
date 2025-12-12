@@ -79,7 +79,7 @@ async fn main() {
     // +++Create tokio runtime manually (macroquad does NOT supply a reactor)
     let rt = Runtime::new().expect("Failed to create Tokio runtime");
 
-    let url = "ws://128.100.8.107:34568";
+    let url = "ws://0.0.0.0:34568";
     
     // Initialize render manager with default world size
     // These should match server's world size
