@@ -5,8 +5,8 @@ ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems 
 **Project Link:** [BALL BALL U - Home Page][home_page]
 
 ## Team Members
-| Team Member        | Student Number | Email                           |
-|--------------------|----------------|---------------------------------|
+| Name                             | Student Number |          Email                  |
+|----------------------------------|----------------|---------------------------------|
 | [Litao (John) Zhou][github_john] | 1006013092     | litao.zhou@mail.utoronto.ca |
 | [Siyu Shao][github_siyu]         | 1007147204     | jasmine.shao@mail.utoronto.ca |
 | [Chuyue Zhang][github_chuyue]    | 1005728303     | zhangchuyue.zhang@mail.utoronto.ca |
@@ -18,7 +18,7 @@ ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems 
 
 ## Introduction 
 
-**Ball Ball U** is a real-time multiplayer PvP game inspired by [Battle of Balls][battle_of_balls] and [Agar.io][agar_io], implemented in Rust with a focus on performance, concurrency, and fair competitive gameplay.
+**Ball Ball U** is a real-time multiplayer PvP(Player versus Player) game inspired by [Battle of Balls][battle_of_balls] and [Agar.io][agar_io], implemented in Rust with a focus on performance, concurrency, and fair competitive gameplay.
 
 
 ## Motivation
