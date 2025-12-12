@@ -97,6 +97,15 @@ Client loop:
 - Capture Input → Send Command → Receive Snapshot → Render
 - Client updates its state based on authoritative  `ServerMessage::StateUpdate` snapshots.
 
+<div align="center">
+  <p>
+    <img src="documentations/images/ece1724_Client Interface Screenshot" alt="Client Interface Screenshot" width="70%">
+  </p>
+  <p>
+    <em> Figure 3. Client Interface Screenshot </em>
+  </p>
+</div>
+
 ### 3. Networking & Data Consistency
 
 #### **Shared Protocol Library**
@@ -124,7 +133,14 @@ Using **serde** and **serde_json**.
 - Broadcasts via Tx channels to all connected clients.
 - Ensures every player receives a synchronised world state.
 
-
+<div align="center">
+  <p>
+    <img src="documentations/images/ece1724_2 Clients have the same leaderboard status screenshot" alt="Leaderboard Data Consistency Screenshot" width="70%">
+  </p>
+  <p>
+    <em> Figure 4. 2 Clients have the same leaderboard status screenshot </em>
+  </p>
+</div>
 
 ## User’s and Developer’s Guide
 
