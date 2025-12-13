@@ -1,5 +1,6 @@
 # ECE1724-F1-2025F-Rust-Ball-Ball-U
-ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems with Rust 2025 Fall Project
+ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems with Rust 2025 Fall Project\
+The repository contains all the source code and documentations for the course project
 
 **Course Link:** [Performant Software Systems with Rust][course_page] \
 **Project Link:** [BALL BALL U - Home Page][home_page]
@@ -14,7 +15,7 @@ ECE1724H F1 Special Topics in Software Engineering: Performant Software Systems 
 ## Presentation and Demo
 **Slide Link:** TBA!!!! \
 **Presentation Link:** TBA!!!! \
-**Demo Link:** https://youtu.be/22g9sA8ySFI
+**Demo Link:** [BALL BALL U - Demo][demo]
 
 ## Introduction 
 
@@ -425,6 +426,7 @@ In conclusion, **Ball Ball U** successfully demonstrates the power of Rust in bu
 
 [course_page]: https://www.eecg.toronto.edu/~bli/ece1724
 [home_page]: https://github.com/zlt0518/ECE1724-2025F-Rust-Ball-Ball-U
+[demo]: https://youtu.be/22g9sA8ySFI
 [battle_of_balls]: https://www.battleofballs.com
 [agar_io]: https://agar.io
 [github_john]: https://github.com/zlt0518
