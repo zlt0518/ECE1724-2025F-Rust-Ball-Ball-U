@@ -410,7 +410,7 @@ The client will automatically connect to the server’s WebSocket endpoint and b
 - Debugging and Testing;
 - Wrote presentation and report.
 
-***Several parts of the code were implemented during live debugging and coding sessions, with commits pushed by a single team member.**
+**IMPORTANT: Several parts of the code were implemented during live debugging and coding sessions, with commits pushed by a single team member.**
 
 ## Lesson Learned
 Working on **Ball Ball U** let us use Rust in a way that is very different from small homework problems. We had to keep an authoritative game server, a shared-protocol crate, and a real-time client working together. Through this process, we became more comfortable with Rust’s ownership rules, async/await, and WebSocket networking, and we saw how these tools can be combined to support a fast PvP game.
