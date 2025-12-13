@@ -368,23 +368,22 @@ Open a second terminal window (or use a second machine via SSH) and run:
 cargo run -p client
 ```
 
-The client will automatically connect to the server’s WebSocket endpoint and begin rendering the game.
+The client will automatically connect to the server’s WebSocket endpoint and begin rendering the game. \
 **You may open multiple client instances (each in its own terminal or via SSH), and as long as they are connected to the same server address, all clients will join the same game world and play together**
 
 ### 6. Controls and UI
 
 #### When the client window opens:
-- Use [W][A][S][D] or the Arrow Keys to move your ball.
-- Keyboard input player nickname.
-- Press [Enter] to mark yourself as ready / start the game.
-- Press [Esc] to quit the client.
+0. (Optional) Keyboard input player nickname.
+1. Press **[Enter]** to mark yourself as ready / start the game.
+2. Use **[W][A][S][D]** or the Arrow Keys **[↑][→][↓][←]** to move your ball.
+3. Press **[Esc]** to quit the client.
 
 #### The client shows:
 - Your own ball (with a unique colour and name).
 - Other players’ balls.
 - Food dots.
 - Basic UI overlays, such as a timer and scores.
-
 
 ## Contributions by each team member
 ### Siyu Shao
