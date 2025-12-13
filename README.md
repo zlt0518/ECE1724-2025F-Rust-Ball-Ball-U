@@ -309,18 +309,23 @@ These instructions work on both Ubuntu Linux and MacOS.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-### 1. Enter the project workspace
+### 1. Git Clone the project
+```bash
+git clone https://github.com/zlt0518/ECE1724-2025F-Rust-Ball-Ball-U.git
+```
+
+### 2. Enter the code workspace within the project
 ```bash
 cd ballballu
 ```
 
-### 2. Build the entire workspace
+### 3. Build the entire workspace
 ```bash
 cargo build
 ```
 This compiles all three crates: server, client, and shared.
 
-### 2.1. (Important): Network ports configuration
+### 3.1. (Important): Network ports configuration
 **The server process opens two TCP ports:**
 - An HTTP server for static assets (HTML/JS/CSS) on port <34567>.
 - A WebSocket game server for real-time gameplay on port <34568>.
@@ -329,13 +334,13 @@ This compiles all three crates: server, client, and shared.
 - Make sure these two ports (<34567>, <34568>) are not already in use on the machine where you run the server.
 - If there is a firewall, allow incoming TCP connections on these ports (at least from the machine running the client).
 
-### 3. Run the server
+### 4. Run the server
 ```bash
 cargo run -p server
 ```
 The server will start listening for WebSocket connections and begin running the game loop.
 
-### 3.1. (Optional): Connect From Another Machine Using SSH
+### 4.1. (Optional): Connect From Another Machine Using SSH
 
 If you want to run the server on one machine and the client on another:
 
@@ -355,7 +360,7 @@ ssh username@SERVER_IP_ADDRESS
 
 After connecting, you can run the server or client normally on that machine.
 
-### 4. Run the client
+### 5. Run the client
 
 Open a second terminal window (or use a second machine via SSH) and run:
 ```bash
@@ -404,6 +409,8 @@ The client will automatically connect to the server’s WebSocket endpoint and b
 - Implemented the mechanism to generate players at random places and generate different types of dots during the game;
 - Debugging and Testing;
 - Wrote presentation and report.
+
+***Several parts of the code were implemented during live debugging and coding sessions, with commits pushed by a single team member.**
 
 ## Lesson Learned
 Working on **Ball Ball U** let us use Rust in a way that is very different from small homework problems. We had to keep an authoritative game server, a shared-protocol crate, and a real-time client working together. Through this process, we became more comfortable with Rust’s ownership rules, async/await, and WebSocket networking, and we saw how these tools can be combined to support a fast PvP game.
