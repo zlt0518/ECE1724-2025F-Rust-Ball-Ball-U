@@ -370,7 +370,7 @@ cargo run -p client
 The client will automatically connect to the server’s WebSocket endpoint and begin rendering the game.
 **You may open multiple client instances (each in its own terminal or via SSH), and as long as they are connected to the same server address, all clients will join the same game world and play together**
 
-### 5. Controls and UI
+### 6. Controls and UI
 
 #### When the client window opens:
 - Use [W][A][S][D] or the Arrow Keys to move your ball.
