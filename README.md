@@ -396,7 +396,7 @@ The client will automatically connect to the server’s WebSocket endpoint and b
 
 ### Litao(John) Zhou
 - Implemented shared game mechanism library;
-- Implemented client skeleton and established communication with server;
+- Implemented client and established communication with server;
 - Implemented start page and type naming feature;
 - Implemented timer for client;
 - Debugging and Testing;
