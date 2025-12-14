@@ -13,7 +13,7 @@ The repository contains all the source code and documentations for the course pr
 | [Chuyue Zhang][github_chuyue]    | 1005728303     | zhangchuyue.zhang@mail.utoronto.ca |
 
 ## Presentation and Demo
-**Slide Link:** TBA!!!! \
+**Slide Link:** [BALL BALL U - Slide][slide] \
 **Presentation Link:** TBA!!!! \
 **Demo Link:** [BALL BALL U - Demo][demo]
 
@@ -425,6 +425,7 @@ In conclusion, **Ball Ball U** successfully demonstrates the power of Rust in bu
 
 [course_page]: https://www.eecg.toronto.edu/~bli/ece1724
 [home_page]: https://github.com/zlt0518/ECE1724-2025F-Rust-Ball-Ball-U
+[slide]: https://github.com/zlt0518/ECE1724-2025F-Rust-Ball-Ball-U/blob/main/documentations/Ball_Ball_U_Slide.pdf
 [demo]: https://youtu.be/22g9sA8ySFI
 [battle_of_balls]: https://www.battleofballs.com
 [agar_io]: https://agar.io
