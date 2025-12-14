@@ -14,8 +14,8 @@ The repository contains all the source code and documentations for the course pr
 
 ## Presentation and Demo
 **Slide Link:** [BALL BALL U - Slide][slide] \
-**Presentation Link:** TBA!!!! \
-**Demo Link:** [BALL BALL U - Demo][demo]
+**Video Presentation Link:** [BALL BALL U - Video Presentation][presentation] \
+**Video Demo Link:** [BALL BALL U - Video Demo][demo]
 
 ## Introduction 
 
@@ -426,6 +426,7 @@ In conclusion, **Ball Ball U** successfully demonstrates the power of Rust in bu
 [course_page]: https://www.eecg.toronto.edu/~bli/ece1724
 [home_page]: https://github.com/zlt0518/ECE1724-2025F-Rust-Ball-Ball-U
 [slide]: https://github.com/zlt0518/ECE1724-2025F-Rust-Ball-Ball-U/blob/main/documentations/Ball_Ball_U_Slide.pdf
+[presentation]: https://youtu.be/LR4ncp6yPiA
 [demo]: https://youtu.be/22g9sA8ySFI
 [battle_of_balls]: https://www.battleofballs.com
 [agar_io]: https://agar.io
